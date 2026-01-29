@@ -1,5 +1,5 @@
 <?php
-require_once 'config.php';
+require_once '/Loan-system/config.php';
 
 if (isLoggedIn()) {
     if (isAdmin()) {
@@ -8,6 +8,6 @@ if (isLoggedIn()) {
         redirect('user_dashboard.php');
     }
 } else {
-    redirect('login.php');
+    redirect('Loan-system/login.php');
 }
 ?>
