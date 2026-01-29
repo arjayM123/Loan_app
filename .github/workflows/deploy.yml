@@ -1,4 +1,4 @@
-name: Deploy to InfinityFree
+name: HIRAM APP
 
 on:
   push:
@@ -9,11 +9,11 @@ jobs:
   ftp-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Loan app
+        uses: if0_41024119
 
-      - name: Upload to InfinityFree via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      - name: loan app
+        uses: if0_41024119
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
