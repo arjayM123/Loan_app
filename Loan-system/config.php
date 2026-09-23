@@ -1,7 +1,5 @@
 <?php
-// Database configuration
-// Default is the deployed online database for production use.
-// For local testing only, set APP_ENV=local or access via localhost.
+
 $environmentOverride = getenv('APP_ENV') ?: ($_SERVER['APP_ENV'] ?? null);
 $hostName = strtolower($_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? ''));
 
