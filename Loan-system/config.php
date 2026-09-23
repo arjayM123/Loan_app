@@ -10,8 +10,7 @@ $isLocalEnvironment = ($environmentOverride === 'local') ||
     strpos($hostName, '127.0.0.1') !== false ||
     strpos($hostName, '::1') !== false ||
     strpos($hostName, 'loanapp.local') !== false ||
-    strpos($hostName, 'loanapp.test') !== false ||
-    strpos($hostName, 'loanapp') !== false;
+    strpos($hostName, 'loanapp.test') !== false;
 
 if ($isLocalEnvironment) {
     define('DB_HOST', 'localhost');
