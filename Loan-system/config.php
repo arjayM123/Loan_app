@@ -22,7 +22,7 @@ if ($isLocalEnvironment) {
     define('DB_HOST', 'sql100.infinityfree.com');
     define('DB_USER', 'if0_41024119');
     define('DB_PASS', 'HIRAM2026');
-    define('DB_NAME', 'if0_41024119_loanapp');
+    define('DB_NAME', 'if0_41024119_loan_system');
 }
 
 // Create database connection
