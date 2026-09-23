@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const interestRateVisible = document.getElementById('interestRateVisible');
     const loanAmount = document.getElementById('loanAmount');
     const interestRate = document.getElementById('interestRate');
+    const currency = document.getElementById('currency');
+    const currencySymbol = document.getElementById('currencySymbol');
     const monthlyTerm = document.getElementById('monthlyTerm');
     const dueDate = document.getElementById('dueDate');
     const summaryDiv = document.getElementById('calculationSummary');
@@ -11,8 +13,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let selectedDay = null;
     
     // Format number with commas
+    function getCurrencyDetails() {
+        return currency.value === 'SGD'
+            ? { symbol: '$', locale: 'en-SG' }
+            : { symbol: '₱', locale: 'en-PH' };
+    }
+
     function formatNumber(num) {
-        return num.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const details = getCurrencyDetails();
+        return details.symbol + num.toLocaleString(details.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
     
     // Parse formatted number
@@ -96,10 +105,10 @@ interestRateVisible.value = '10';
             const totalAmount = principal + totalInterest;
             const monthlyPayment = totalAmount / months;
             
-            document.getElementById('principalDisplay').textContent = '₱' + formatNumber(principal);
-            document.getElementById('interestDisplay').textContent = '₱' + formatNumber(totalInterest);
-            document.getElementById('monthlyDisplay').textContent = '₱' + formatNumber(monthlyPayment);
-            document.getElementById('totalDisplay').textContent = '₱' + formatNumber(totalAmount);
+            document.getElementById('principalDisplay').textContent = formatNumber(principal);
+            document.getElementById('interestDisplay').textContent = formatNumber(totalInterest);
+            document.getElementById('monthlyDisplay').textContent = formatNumber(monthlyPayment);
+            document.getElementById('totalDisplay').textContent = formatNumber(totalAmount);
             
             generatePaymentSchedule(months, day, monthlyPayment);
             summaryDiv.classList.remove('d-none');
@@ -119,7 +128,7 @@ interestRateVisible.value = '10';
             
             html += `<tr>
                 <td>${i}</td>
-                <td>₱${formatNumber(amount)}</td>
+                <td>${formatNumber(amount)}</td>
                 <td>${dateStr}</td>
             </tr>`;
         }
@@ -127,4 +136,11 @@ interestRateVisible.value = '10';
         html += '</tbody></table></div>';
         document.getElementById('paymentSchedule').innerHTML = html;
     }
+
+    currency.addEventListener('change', function () {
+        currencySymbol.textContent = getCurrencyDetails().symbol;
+        calculateLoan();
+    });
+
+    currencySymbol.textContent = getCurrencyDetails().symbol;
 });

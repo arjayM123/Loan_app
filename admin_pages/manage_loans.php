@@ -1,11 +1,15 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once 'admin_layout.php';
 
 if (!isLoggedIn() || !isAdmin()) {
-    redirect('login.php');
+    redirect('../Loan-system/login.php');
 }
 
 $db = Database::getInstance()->getConnection();
+$currency_symbol = static function ($currency) {
+    return strtoupper($currency ?? 'PHP') === 'SGD' ? '$' : '₱';
+};
 
 // Handle status update
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
@@ -75,45 +79,9 @@ if ($status_filter != 'all') {
 $stmt->execute();
 $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Loans - Admin</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        .content-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            margin-top: 20px;
-        }
-        .filter-btn {
-            border-radius: 20px;
-            padding: 8px 20px;
-        }
-        @media (max-width: 767px) {
-            .card {
-                border-radius: 12px;
-            }
-            .card-body {
-                font-size: 0.9rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <?php include '../Loan-system/navbar.php'; ?>
-    
+<?php ob_start(); ?>
     <div class="container">
-        <div class="content-card">
+        <div class="card border-0 shadow-sm p-4 mt-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3><i class="bi bi-folder2-open me-2"></i>Manage Loan Applications</h3>
             </div>
@@ -136,11 +104,11 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="mb-4">
                 <!-- Desktop Button Group -->
                 <div class="d-none d-md-flex justify-content-center flex-wrap gap-2">
-                    <a href="?status=all" class="btn btn-outline-primary filter-btn <?php echo $status_filter == 'all' ? 'active' : ''; ?>">All</a>
-                    <a href="?status=pending" class="btn btn-outline-warning filter-btn <?php echo $status_filter == 'pending' ? 'active' : ''; ?>">Pending</a>
-                    <a href="?status=approved" class="btn btn-outline-success filter-btn <?php echo $status_filter == 'approved' ? 'active' : ''; ?>">Approved</a>
-                    <a href="?status=rejected" class="btn btn-outline-danger filter-btn <?php echo $status_filter == 'rejected' ? 'active' : ''; ?>">Rejected</a>
-                    <a href="?status=completed" class="btn btn-outline-info filter-btn <?php echo $status_filter == 'completed' ? 'active' : ''; ?>">Completed</a>
+                    <a href="?status=all" class="btn btn-outline-primary <?php echo $status_filter == 'all' ? 'active' : ''; ?>">All</a>
+                    <a href="?status=pending" class="btn btn-outline-warning <?php echo $status_filter == 'pending' ? 'active' : ''; ?>">Pending</a>
+                    <a href="?status=approved" class="btn btn-outline-success <?php echo $status_filter == 'approved' ? 'active' : ''; ?>">Approved</a>
+                    <a href="?status=rejected" class="btn btn-outline-danger <?php echo $status_filter == 'rejected' ? 'active' : ''; ?>">Rejected</a>
+                    <a href="?status=completed" class="btn btn-outline-info <?php echo $status_filter == 'completed' ? 'active' : ''; ?>">Completed</a>
                 </div>
 
                 <!-- Mobile Dropdown -->
@@ -172,132 +140,33 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <!-- Responsive Loans Display -->
             <?php if (count($loans) > 0): ?>
                 
-                <!-- Desktop Table View -->
-                <div class="table-responsive d-none d-md-block">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>ID</th>
-                                <th>Applicant</th>
-                                <th>User</th>
-                                <th>Loan Amount</th>
-                                <th>Total Amount</th>
-                                <th>Rate</th>
-                                <th>Term</th>
-                                <th>Status</th>
-                                <th>Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($loans as $loan): ?>
-                                <tr>
-                                    <td><strong>#<?php echo $loan['id']; ?></strong></td>
-                                    <td>
-                                        <strong><?php echo $loan['applicant_name']; ?></strong><br>
-                                        <small class="text-muted"><?php echo $loan['phone'] ?: ''; ?></small>
-                                    </td>
-                                    <td>
-                                        <?php echo $loan['user_name'] ?? 'N/A'; ?><br>
-                                        <small class="text-muted"><?php echo $loan['email'] ?: ''; ?></small>
-                                    </td>
-                                    <td>₱<?php echo number_format($loan['loan_amount'], 2); ?></td>
-                                    <td><strong>₱<?php echo number_format($loan['total_amount'], 2); ?></strong></td>
-                                    <td><?php echo $loan['interest_rate']; ?>%</td>
-                                    <td><?php echo $loan['loan_term']; ?> mos</td>
-                                    <td>
+                <div class="row g-3">
+                    <?php foreach ($loans as $loan): ?>
+                        <?php $symbol = $currency_symbol($loan['currency'] ?? 'PHP'); ?>
+                        <div class="col-12 col-lg-6">
+                            <div class="card h-100 shadow-sm border-0">
+                                <a href="loan_details.php?id=<?php echo $loan['id']; ?>" class="card-body text-decoration-none text-dark">
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <div>
+                                            <h5 class="card-title mb-1"><?php echo htmlspecialchars($loan['applicant_name']); ?></h5>
+                                            <p class="text-muted small mb-3">Application #<?php echo $loan['id']; ?> · <?php echo date('M d, Y', strtotime($loan['application_date'])); ?></p>
+                                        </div>
                                         <span class="badge <?php echo $badge_class[$loan['status']] ?? 'bg-secondary'; ?>">
                                             <?php echo ucfirst($loan['status']); ?>
                                         </span>
-                                    </td>
-                                    <td><?php echo date('M d, Y', strtotime($loan['application_date'])); ?></td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <a href="loan_details.php?id=<?php echo $loan['id']; ?>" 
-                                               class="btn btn-sm btn-primary" title="View Details">
-                                                <i class="bi bi-eye"></i>
-                                            </a>
-                                            <?php if ($loan['status'] == 'approved'): ?>
-                                                <a href="manage_payments.php?loan_id=<?php echo $loan['id']; ?>" 
-                                                   class="btn btn-sm btn-info" title="Manage Payments">
-                                                    <i class="bi bi-cash-stack"></i>
-                                                </a>
-                                            <?php endif; ?>
-                                            <?php if ($loan['status'] == 'pending'): ?>
-                                                <button class="btn btn-sm btn-success"
-                                                        onclick="updateStatus(<?php echo $loan['id']; ?>, 'approved')"
-                                                        title="Approve">
-                                                    <i class="bi bi-check-lg"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-danger"
-                                                        onclick="updateStatus(<?php echo $loan['id']; ?>, 'rejected')"
-                                                        title="Reject">
-                                                    <i class="bi bi-x-lg"></i>
-                                                </button>
-                                            <?php endif; ?>
-                                            <button type="button" class="btn btn-sm btn-danger" 
-                                                    onclick="confirmDelete(<?php echo $loan['id']; ?>, '<?php echo htmlspecialchars($loan['applicant_name']); ?>')" 
-                                                    title="Delete Permanently">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Mobile Card View -->
-                <div class="d-block d-md-none">
-                    <?php foreach ($loans as $loan): ?>
-                        <div class="card mb-3 shadow-sm">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <h5 class="card-title mb-1">#<?php echo $loan['id']; ?> - <?php echo $loan['applicant_name']; ?></h5>
-                                    <span class="badge <?php echo $badge_class[$loan['status']] ?? 'bg-secondary'; ?>">
-                                        <?php echo ucfirst($loan['status']); ?>
-                                    </span>
-                                </div>
-                                <p class="mb-2 text-muted small"><?php echo date('M d, Y', strtotime($loan['application_date'])); ?></p>
-
-                                <ul class="list-unstyled small mb-3">
-                                    <li><strong>Email:</strong> <?php echo $loan['email'] ?: '—'; ?></li>
-                                    <li><strong>Phone:</strong> <?php echo $loan['phone'] ?: '—'; ?></li>
-                                    <li><strong>Loan:</strong> ₱<?php echo number_format($loan['loan_amount'], 2); ?></li>
-                                    <li><strong>Total:</strong> ₱<?php echo number_format($loan['total_amount'], 2); ?></li>
-                                    <li><strong>Term:</strong> <?php echo $loan['loan_term']; ?> months</li>
-                                    <li><strong>Rate:</strong> <?php echo $loan['interest_rate']; ?>%</li>
-                                </ul>
-
-                                <div class="d-flex justify-content-end gap-2 flex-wrap">
-                                    <a href="loan_details.php?id=<?php echo $loan['id']; ?>" 
-                                       class="btn btn-sm btn-primary" title="View Details">
-                                        <i class="bi bi-eye"></i>
-                                    </a>
-                                    <?php if ($loan['status'] == 'approved'): ?>
-                                        <a href="manage_payments.php?loan_id=<?php echo $loan['id']; ?>" 
-                                           class="btn btn-sm btn-info" title="Manage Payments">
-                                            <i class="bi bi-cash-stack"></i>
-                                        </a>
-                                    <?php endif; ?>
-                                    <?php if ($loan['status'] == 'pending'): ?>
-                                        <button class="btn btn-sm btn-success"
-                                                onclick="updateStatus(<?php echo $loan['id']; ?>, 'approved')"
-                                                title="Approve">
-                                            <i class="bi bi-check-lg"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-danger"
-                                                onclick="updateStatus(<?php echo $loan['id']; ?>, 'rejected')"
-                                                title="Reject">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
-                                    <?php endif; ?>
-                                    <button type="button" class="btn btn-sm btn-danger" 
-                                            onclick="confirmDelete(<?php echo $loan['id']; ?>, '<?php echo htmlspecialchars($loan['applicant_name']); ?>')" 
-                                            title="Delete Permanently">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    </div>
+                                    <div class="row g-2 small">
+                                        <div class="col-6"><span class="text-muted d-block">Loan amount</span><strong><?php echo $symbol . number_format($loan['loan_amount'], 2); ?></strong></div>
+                                        <div class="col-6"><span class="text-muted d-block">Term</span><strong><?php echo $loan['loan_term']; ?> months</strong></div>
+                                        <div class="col-6"><span class="text-muted d-block">Interest</span><strong><?php echo $loan['interest_rate']; ?>%</strong></div>
+                                        <div class="col-6"><span class="text-muted d-block">Customer</span><strong><?php echo htmlspecialchars($loan['user_name'] ?? 'N/A'); ?></strong></div>
+                                    </div>
+                                    
+                                </a>
+                                <div class="card-footer bg-transparent border-0 pt-0 d-flex gap-2">
+                                    <?php if ($loan['status'] == 'approved'): ?><a href="manage_payments.php?loan_id=<?php echo $loan['id']; ?>" class="btn btn-sm btn-info"><i class="bi bi-cash-stack"></i></a><?php endif; ?>
+                                    <?php if ($loan['status'] == 'pending'): ?><button class="btn btn-sm btn-success" onclick="updateStatus(<?php echo $loan['id']; ?>, 'approved')"><i class="bi bi-check-lg"></i></button><button class="btn btn-sm btn-danger" onclick="updateStatus(<?php echo $loan['id']; ?>, 'rejected')"><i class="bi bi-x-lg"></i></button><?php endif; ?>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-auto" onclick="confirmDelete(<?php echo $loan['id']; ?>, '<?php echo htmlspecialchars($loan['applicant_name'], ENT_QUOTES); ?>')"><i class="bi bi-trash"></i></button>
                                 </div>
                             </div>
                         </div>
@@ -314,14 +183,14 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
     
     <!-- Hidden form for status update -->
-    <form id="statusForm" method="POST" style="display: none;">
+    <form id="statusForm" method="POST" class="visually-hidden">
         <input type="hidden" name="loan_id" id="statusLoanId">
         <input type="hidden" name="status" id="statusValue">
         <input type="hidden" name="update_status" value="1">
     </form>
     
     <!-- Hidden form for deletion -->
-    <form id="deleteForm" method="POST" style="display: none;">
+    <form id="deleteForm" method="POST" class="visually-hidden">
         <input type="hidden" name="loan_id" id="deleteLoanId">
         <input type="hidden" name="delete_loan" value="1">
     </form>
@@ -369,7 +238,6 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let deleteModalInstance;
         
@@ -397,5 +265,6 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             document.getElementById('deleteForm').submit();
         }
     </script>
-</body>
-</html>
+<?php
+$content = ob_get_clean();
+renderAdminPage('Manage Loans - Admin', $content);

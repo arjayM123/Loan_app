@@ -1,8 +1,9 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once 'admin_layout.php';
 
 if (!isLoggedIn()) {
-    redirect('login.php');
+    redirect('../Loan-system/login.php');
 }
 
 $db = Database::getInstance()->getConnection();
@@ -38,63 +39,41 @@ $stmt = $db->prepare("SELECT * FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Profile</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        .content-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-        .profile-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 30px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        .profile-icon {
-            width: 100px;
-            height: 100px;
-            background: white;
-            color: #667eea;
-            border-radius: 50%;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            margin-bottom: 15px;
-        }
-    </style>
-</head>
-<body>
-    <?php include '../Loan-system/navbar.php'; ?>
-    
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="profile-header">
-                    <div class="profile-icon">
-                        <i class="bi bi-person"></i>
+<?php ob_start(); ?>
+    <div class="container py-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-2 mb-4">
+            <div>
+                <p class="text-warning text-uppercase small fw-semibold mb-1">Administration</p>
+                <h2 class="mb-1">Account settings</h2>
+                <p class="text-muted mb-0">Manage your administrator identity and contact details.</p>
+            </div>
+            <a href="admin_dashboard.php" class="btn btn-outline-dark">
+                <i class="bi bi-arrow-left me-2"></i>Dashboard
+            </a>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card bg-dark text-white border-bottom border-warning border-4 shadow-sm h-100">
+                    <div class="card-body p-4 p-lg-5">
+                        <div class="bg-warning text-dark rounded-circle d-inline-flex align-items-center justify-content-center p-4 fs-1 mb-4">
+                            <i class="bi bi-person-badge"></i>
+                        </div>
+                        <p class="text-warning text-uppercase small fw-semibold mb-2">Administrator</p>
+                        <h3 class="mb-2"><?php echo htmlspecialchars($user['full_name']); ?></h3>
+                        <p class="text-white-50 mb-4"><?php echo htmlspecialchars($user['email']); ?></p>
+                        <div class="border-top border-secondary pt-3">
+                            <small class="text-white-50 d-block">Member since</small>
+                            <strong><?php echo date('F d, Y', strtotime($user['created_at'])); ?></strong>
+                        </div>
                     </div>
-                    <h3><?php echo $user['full_name']; ?></h3>
-                    <p class="mb-0 opacity-75">@<?php echo $user['username']; ?></p>
                 </div>
-                
-                <div class="content-card">
-                    <h4 class="mb-4"><i class="bi bi-person-circle me-2"></i>Profile Information</h4>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card border-0 shadow-sm p-4 p-lg-5">
+                    <h4 class="mb-1"><i class="bi bi-person-circle me-2 text-warning"></i>Profile information</h4>
+                    <p class="text-muted mb-4">Update the details shown across the admin console.</p>
                     
                     <?php if ($success): ?>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -112,44 +91,31 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
                     
                     <form method="POST" action="">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold">Username</label>
-                            <input type="text" class="form-control" value="<?php echo $user['username']; ?>" disabled>
-                            <small class="text-muted">Username cannot be changed</small>
-                        </div>
-                        
-                        <div class="mb-3">
                             <label class="form-label fw-semibold">Full Name</label>
                             <input type="text" class="form-control" name="full_name" 
-                                   value="<?php echo $user['full_name']; ?>" required>
+                                   value="<?php echo htmlspecialchars($user['full_name']); ?>" required>
                         </div>
                         
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Email</label>
                             <input type="email" class="form-control" name="email" 
-                                   value="<?php echo $user['email']; ?>" required>
+                                   value="<?php echo htmlspecialchars($user['email']); ?>" required>
                         </div>
                         
-                        
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold">Member Since</label>
-                            <input type="text" class="form-control" 
-                                   value="<?php echo date('F d, Y', strtotime($user['created_at'])); ?>" disabled>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary px-4">
+                        <button type="submit" class="btn btn-warning px-4 fw-semibold">
                             <i class="bi bi-save me-2"></i>Update Profile
                         </button>
                     </form>
                 </div>
                 
-                <div class="content-card mt-4">
-                    <h4 class="mb-4"><i class="bi bi-shield-lock me-2"></i>Change Password</h4>
-                    <p class="text-muted">To change your password, please contact the administrator.</p>
+                <div class="alert alert-warning d-flex align-items-start gap-2 mt-4 mb-0" role="note">
+                    <i class="bi bi-shield-lock-fill fs-5"></i>
+                    <div><strong>Password security:</strong> Password changes are managed by the system administrator.</div>
                 </div>
             </div>
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php
+$content = ob_get_clean();
+renderAdminPage('My Profile', $content);

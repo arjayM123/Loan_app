@@ -39,8 +39,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $message = 'Admin password has been updated successfully!';
             } else {
                 // Create new admin
-                $stmt = $db->prepare("INSERT INTO users (username, password, email, full_name, role) VALUES (?, ?, ?, ?, ?)");
-                $stmt->execute(['admin', $hashed_password, 'admin@loansystem.com', 'System Administrator', 'admin']);
+                $stmt = $db->prepare("INSERT INTO users (username, phone, password, email, full_name, role) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute(['admin', '+639000000000', $hashed_password, 'admin@loansystem.com', 'System Administrator', 'admin']);
                 $message = 'Admin account has been created successfully!';
             }
             
@@ -60,34 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Admin Password Setup</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-        .setup-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            max-width: 500px;
-            width: 100%;
-        }
-        .setup-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px 20px 0 0;
-            padding: 30px;
-            text-align: center;
-        }
-    </style>
 </head>
 <body>
-    <div class="setup-card">
-        <div class="setup-header">
+    <div class="card shadow-sm border-0 w-100 col-md-6">
+        <div class="card-header bg-primary text-white text-center p-4">
             <i class="bi bi-shield-lock fs-1 mb-3"></i>
             <h2>Admin Password Setup</h2>
             <p class="mb-0 opacity-75">Create or reset admin password</p>
@@ -134,5 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <?php endif; ?>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="Loan-system/alert_auto_dismiss.js"></script>
 </body>
 </html>

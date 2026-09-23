@@ -5,7 +5,8 @@ USE loan_system;
 -- Create Users Table
 CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
+    username VARCHAR(50) NULL,
+    phone VARCHAR(20) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     full_name VARCHAR(100) NOT NULL,
@@ -19,6 +20,7 @@ CREATE TABLE IF NOT EXISTS loan_applications (
     user_id INT,
     applicant_name VARCHAR(100) NOT NULL,
     phone VARCHAR(20),
+    currency CHAR(3) NOT NULL DEFAULT 'PHP',
     address TEXT,
     loan_amount DECIMAL(15, 2) NOT NULL,
     interest_rate DECIMAL(5, 2) NOT NULL,
@@ -62,8 +64,8 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 
 -- Insert default admin user (password: admin123)
-INSERT INTO users (username, password, email, full_name, role) 
-VALUES ('admin', '$2y$10$e0MYzXyjpJS7Pd0RVvHwHe8Qr2.LvqN9z3x3C8bCpvQEhBNJZXPWa', 'admin@loansystem.com', 'System Administrator', 'admin');
+INSERT INTO users (username, phone, password, email, full_name, role) 
+VALUES ('admin', '+639000000000', '$2y$10$e0MYzXyjpJS7Pd0RVvHwHe8Qr2.LvqN9z3x3C8bCpvQEhBNJZXPWa', 'admin@loansystem.com', 'System Administrator', 'admin');
 
 -- Create indexes for better performance
 CREATE INDEX idx_loan_status ON loan_applications(status);

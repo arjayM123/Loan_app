@@ -5,36 +5,42 @@ $error = '';
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $username = sanitize($_POST['username']);
-    $email = sanitize($_POST['email']);
-    $full_name = sanitize($_POST['full_name']);
-    $password = $_POST['password'];
-    $confirm_password = $_POST['confirm_password'];
+    $phone = sanitize($_POST['phone'] ?? '');
+    $email = sanitize($_POST['email'] ?? '');
+    $full_name = sanitize($_POST['full_name'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm_password = $_POST['confirm_password'] ?? '';
+    $normalized_phone = normalizePhoneNumber($phone, 'PH');
     
-    if ($password !== $confirm_password) {
+    if (!preg_match('/^[^\s@]+@gmail\.com$/i', $email)) {
+        $error = 'Please enter a valid Gmail address ending with @gmail.com.';
+    } else if (empty($phone)) {
+        $error = 'Phone number is required';
+    } else if (!$normalized_phone) {
+        $error = 'Please enter a valid Philippine mobile number with at least 9 digits.';
+    } else if ($password !== $confirm_password) {
         $error = 'Passwords do not match';
     } else if (strlen($password) < 6) {
         $error = 'Password must be at least 6 characters';
     } else {
         $db = Database::getInstance()->getConnection();
+        $phone_variants = phoneVariants($normalized_phone);
         
-        // Check if username exists
-        $stmt = $db->prepare("SELECT id FROM users WHERE username = ?");
-        $stmt->execute([$username]);
+        $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
+        $stmt->execute([$email]);
         if ($stmt->fetch()) {
-            $error = 'Username already exists';
+            $error = 'Email already registered';
         } else {
-            // Check if email exists
-            $stmt = $db->prepare("SELECT id FROM users WHERE email = ?");
-            $stmt->execute([$email]);
+            $placeholders = implode(',', array_fill(0, count($phone_variants), '?'));
+            $stmt = $db->prepare("SELECT id FROM users WHERE phone IN ($placeholders)");
+            $stmt->execute($phone_variants);
             if ($stmt->fetch()) {
-                $error = 'Email already registered';
+                $error = 'Phone number already registered';
             } else {
-                // Insert new user
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                $stmt = $db->prepare("INSERT INTO users (username, password, email, full_name) VALUES (?, ?, ?, ?)");
+                $stmt = $db->prepare("INSERT INTO users (phone, password, email, full_name) VALUES (?, ?, ?, ?)");
                 
-                if ($stmt->execute([$username, $hashed_password, $email, $full_name])) {
+                if ($stmt->execute([$normalized_phone, $hashed_password, $email, $full_name])) {
                     $success = 'Registration successful! You can now login.';
                 } else {
                     $error = 'Registration failed. Please try again.';
@@ -52,39 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Register - Loan System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            padding: 20px 0;
-        }
-        .register-card {
-            background: white;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        .register-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px 20px 0 0;
-            padding: 30px;
-        }
-        .btn-register {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border: none;
-            padding: 12px;
-            font-weight: 600;
-        }
-    </style>
 </head>
 <body>
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-6">
-                <div class="register-card">
-                    <div class="register-header text-center">
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-dark text-white text-center p-4">
                         <i class="bi bi-person-plus fs-1 mb-3"></i>
                         <h2>Create Account</h2>
                         <p class="mb-0">Register for a new account</p>
@@ -112,14 +92,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 </div>
                                 
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Username</label>
-                                    <input type="text" class="form-control" name="username" required>
+                                    <label class="form-label fw-semibold">Phone Number</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">+63</span>
+                                        <input type="tel" class="form-control" id="phone" name="phone" required placeholder="9123456789" inputmode="numeric" maxlength="15">
+                                    </div>
+                                    <div id="phoneValidation" class="invalid-feedback"></div>
                                 </div>
                             </div>
                             
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Email</label>
-                                <input type="email" class="form-control" name="email" required>
+                                <label class="form-label fw-semibold" for="email">Gmail Address</label>
+                                <input type="email" class="form-control" id="email" name="email" required placeholder="example@gmail.com">
+                                <div id="emailValidation" class="invalid-feedback">Please enter a valid Gmail address ending with @gmail.com.</div>
                             </div>
                             
                             <div class="row">
@@ -135,7 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary btn-register w-100 text-white">
+                            <button type="submit" class="btn btn-primary w-100">
                                 <i class="bi bi-person-check me-2"></i>Create Account
                             </button>
                         </form>
@@ -152,5 +137,91 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const phoneInput = document.getElementById('phone');
+        const phoneValidation = document.getElementById('phoneValidation');
+        const emailInput = document.getElementById('email');
+        const emailValidation = document.getElementById('emailValidation');
+
+        const phoneLimits = { min: 9, max: 10, example: '9123456789' };
+
+        function showPhoneWarning(message) {
+            phoneValidation.textContent = message;
+            phoneValidation.classList.add('d-block');
+            phoneInput.setCustomValidity(message);
+        }
+
+        function clearPhoneWarning() {
+            phoneValidation.textContent = '';
+            phoneValidation.classList.remove('d-block');
+            phoneInput.setCustomValidity('');
+        }
+
+        phoneInput.addEventListener('input', function () {
+            const config = phoneLimits;
+            let digits = (this.value || '').replace(/\D/g, '');
+
+            if (!/^\d*$/.test(this.value)) {
+                this.value = digits;
+            }
+
+            if (digits.length > config.max) {
+                digits = digits.slice(0, config.max);
+                showPhoneWarning('This number is too long .');
+            } else if (digits.length < config.min) {
+                showPhoneWarning('Please enter at least ' + config.min + ' digits.');
+            } else {
+                clearPhoneWarning();
+            }
+
+            this.value = digits;
+        });
+
+        phoneInput.addEventListener('blur', function () {
+            const config = phoneLimits;
+            const digits = (this.value || '').replace(/\D/g, '');
+
+            if (digits.length > config.max) {
+                showPhoneWarning('This number is too long.');
+            } else if (digits.length < config.min) {
+                showPhoneWarning('Please enter at least ' + config.min + ' digits.');
+            } else {
+                clearPhoneWarning();
+            }
+        });
+
+        phoneInput.closest('form').addEventListener('submit', function (event) {
+            const digits = (phoneInput.value || '').replace(/\D/g, '');
+            const config = phoneLimits;
+            const isGmail = /^[^\s@]+@gmail\.com$/i.test(emailInput.value.trim());
+
+            if (!isGmail) {
+                event.preventDefault();
+                emailValidation.classList.add('d-block');
+                emailInput.setCustomValidity('Please enter a valid Gmail address ending with @gmail.com.');
+                emailInput.focus();
+                return;
+            }
+
+            emailValidation.classList.remove('d-block');
+            emailInput.setCustomValidity('');
+
+            if (digits.length < config.min || digits.length > config.max) {
+                event.preventDefault();
+                showPhoneWarning('Please enter a valid Philippine mobile number.');
+                phoneInput.focus();
+                return;
+            }
+
+            phoneInput.value = '+63' + digits;
+        });
+
+        emailInput.addEventListener('input', function () {
+            const isGmail = /^[^\s@]+@gmail\.com$/i.test(this.value.trim());
+            emailValidation.classList.toggle('d-block', Boolean(this.value && !isGmail));
+            this.setCustomValidity(this.value && !isGmail ? 'Please enter a valid Gmail address ending with @gmail.com.' : '');
+        });
+    </script>
+    <script src="alert_auto_dismiss.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once 'admin_layout.php';
 
 if (!isLoggedIn() || !isAdmin()) {
     redirect('../Loan-system/login.php');
@@ -13,8 +14,10 @@ $stmt = $db->query("SELECT
     SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_loans,
     SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved_loans,
     SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_loans,
-    SUM(CASE WHEN status = 'approved' THEN loan_amount ELSE 0 END) as total_disbursed,
-    SUM(CASE WHEN status = 'approved' THEN total_amount ELSE 0 END) as total_receivable
+    SUM(CASE WHEN status = 'approved' AND (currency = 'PHP' OR currency IS NULL) THEN loan_amount ELSE 0 END) as total_disbursed_php,
+    SUM(CASE WHEN status = 'approved' AND currency = 'SGD' THEN loan_amount ELSE 0 END) as total_disbursed_sgd,
+    SUM(CASE WHEN status = 'approved' AND (currency = 'PHP' OR currency IS NULL) THEN total_amount ELSE 0 END) as total_receivable_php,
+    SUM(CASE WHEN status = 'approved' AND currency = 'SGD' THEN total_amount ELSE 0 END) as total_receivable_sgd
 FROM loan_applications");
 $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -29,48 +32,8 @@ $stmt = $db->query("SELECT la.*, u.full_name as user_name
     ORDER BY la.application_date DESC LIMIT 10");
 $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Loan System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-        .stat-card {
-            border-radius: 15px;
-            padding: 25px;
-            color: white;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            transition: transform 0.3s;
-        }
-        .stat-card:hover {
-            transform: translateY(-5px);
-        }
-        .stat-card-1 { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .stat-card-2 { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
-        .stat-card-3 { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
-        .stat-card-4 { background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); }
-        .stat-card-5 { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
-        .stat-card-6 { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
-        
-        .content-card {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-        }
-    </style>
-</head>
-<body>
-    <?php include '../Loan-system/navbar.php'; ?>
-    
-    <div class="container">
+<?php ob_start(); ?>
+    <div class="container py-4">
         <div class="mb-4">
             <h2>Admin Dashboard</h2>
             <p class="text-muted">Overview of loan system statistics</p>
@@ -79,7 +42,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <!-- Statistics Cards -->
         <div class="row g-4 mb-4">
             <div class="col-md-4">
-                <div class="stat-card stat-card-1">
+                <div class="card text-bg-primary shadow-sm p-4 h-100">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="opacity-75 mb-2">Total Loans</h6>
@@ -91,7 +54,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             
             <div class="col-md-4">
-                <div class="stat-card stat-card-2">
+                <div class="card text-bg-warning shadow-sm p-4 h-100">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="opacity-75 mb-2">Pending</h6>
@@ -103,7 +66,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             
             <div class="col-md-4">
-                <div class="stat-card stat-card-3">
+                <div class="card text-bg-success shadow-sm p-4 h-100">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="opacity-75 mb-2">Approved</h6>
@@ -115,7 +78,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             
             <div class="col-md-4">
-                <div class="stat-card stat-card-4">
+                <div class="card text-bg-danger shadow-sm p-4 h-100">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="opacity-75 mb-2">Rejected</h6>
@@ -127,11 +90,12 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             
             <div class="col-md-4">
-                <div class="stat-card stat-card-5">
+                <div class="card text-bg-info shadow-sm p-4 h-100">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="opacity-75 mb-2">Total Disbursed</h6>
-                            <h5 class="mb-0">₱<?php echo number_format($stats['total_disbursed'], 2); ?></h5>
+                            <h6 class="mb-0">₱<?php echo number_format($stats['total_disbursed_php'], 2); ?></h6>
+                            <h6 class="mb-0">$<?php echo number_format($stats['total_disbursed_sgd'], 2); ?></h6>
                         </div>
                         <i class="bi bi-cash-stack fs-1 opacity-50"></i>
                     </div>
@@ -139,7 +103,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </div>
             
             <div class="col-md-4">
-                <div class="stat-card stat-card-6">
+                <div class="card text-bg-secondary shadow-sm p-4 h-100">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <h6 class="opacity-75 mb-2">Total Users</h6>
@@ -152,7 +116,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
         
         <!-- Recent Applications -->
-        <div class="content-card">
+        <div class="card border-0 shadow-sm p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Loan Applications</h4>
                 <a href="manage_loans.php" class="btn btn-primary">View All</a>
@@ -178,7 +142,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <tr>
                                     <td>#<?php echo $loan['id']; ?></td>
                                     <td><?php echo $loan['applicant_name']; ?></td>
-                                    <td>₱<?php echo number_format($loan['loan_amount'], 2); ?></td>
+                                    <td><?php echo ($loan['currency'] ?? 'PHP') === 'SGD' ? '$' : '₱'; ?><?php echo number_format($loan['loan_amount'], 2); ?></td>
                                     <td><?php echo $loan['interest_rate']; ?>%</td>
                                     <td><?php echo $loan['loan_term']; ?>m</td>
                                     <td>
@@ -214,6 +178,6 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
     
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<?php
+$content = ob_get_clean();
+renderAdminPage('Admin Dashboard - Loan System', $content);
