@@ -3,7 +3,7 @@
  * Admin Password Setup/Reset Tool
  * 
  * This script helps you create or reset the admin password.
- * Run this file directly in your browser: http://localhost/loan-system/setup_admin.php
+ * Run this file directly in your browser: http://localhost/Loan_app/setup_admin.php
  */
 
 require_once 'Loan-system/config.php';
@@ -27,24 +27,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $db = Database::getInstance()->getConnection();
             $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
             
-            // Check if admin exists
-            $stmt = $db->prepare("SELECT id FROM users WHERE username = 'admin'");
-            $stmt->execute();
+            // Find the admin by the email and phone used when creating the account.
+            $stmt = $db->prepare("SELECT id FROM users WHERE email = ? OR phone = ? LIMIT 1");
+            $stmt->execute(['admin@loansystem.com', '+639000000000']);
             $admin = $stmt->fetch();
             
             if ($admin) {
                 // Update existing admin
-                $stmt = $db->prepare("UPDATE users SET password = ? WHERE username = 'admin'");
-                $stmt->execute([$hashed_password]);
-                $message = 'Admin password has been updated successfully!';
+                $stmt = $db->prepare("UPDATE users SET password = ?, role = 'admin' WHERE id = ?");
+                $stmt->execute([$hashed_password, $admin['id']]);
+                $message = 'Admin password has been updated successfully. Sign in with admin@loansystem.com.';
             } else {
                 // Create new admin
-                $stmt = $db->prepare("INSERT INTO users (username, phone, password, email, full_name, role) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute(['admin', '+639000000000', $hashed_password, 'admin@loansystem.com', 'System Administrator', 'admin']);
-                $message = 'Admin account has been created successfully!';
+                $stmt = $db->prepare("INSERT INTO users (phone, password, email, full_name, role) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute(['+639000000000', $hashed_password, 'admin@loansystem.com', 'System Administrator', 'admin']);
+                $message = 'Admin account has been created successfully. Sign in with admin@loansystem.com.';
             }
-            
-            $message .= '<br><br><strong>Login Details:</strong><br>Username: admin<br>Password: ' . htmlspecialchars($new_password);
             
         } catch (Exception $e) {
             $error = 'Error: ' . $e->getMessage();
@@ -82,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <?php if ($error): ?>
                     <div class="alert alert-danger">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>
-                        <?php echo $error; ?>
+                        <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
                 
