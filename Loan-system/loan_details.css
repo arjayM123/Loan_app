@@ -1,0 +1,108 @@
+body,
+body.bg-light {
+    background: #edf1f6 !important;
+}
+
+.loan-details-page {
+    max-width: 1320px;
+    padding-top: 1.5rem !important;
+    padding-bottom: 3rem !important;
+}
+
+.loan-details-back .btn {
+    border-color: #bdc8d8;
+    border-radius: .7rem;
+    background: #fff;
+    color: #20334e;
+    font-weight: 600;
+}
+
+.loan-details-back .btn:hover {
+    border-color: #aebdd0;
+    background: #f7f9fc;
+    color: #172033;
+}
+
+.loan-details-page .card:not(.loan-summary-card) {
+    overflow: hidden;
+    border: 1px solid #d5deea !important;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 .3rem 1rem rgba(28, 43, 66, .09) !important;
+}
+
+.loan-details-page .card h4,
+.loan-details-page .card h5,
+.loan-details-page .card h6 {
+    color: #1c2b42;
+    font-weight: 700;
+}
+
+.loan-details-page .card .border-bottom {
+    border-color: #e6ebf2 !important;
+}
+
+.loan-details-page .card .table {
+    --bs-table-bg: transparent;
+    --bs-table-hover-bg: #f4f7fb;
+    color: #26364c;
+}
+
+.loan-details-page .card .table thead th {
+    background: #f1f4f8;
+    color: #45566e;
+    font-size: .8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.loan-details-page .card .table > :not(caption) > * > * {
+    border-color: #e7ecf2;
+}
+
+.loan-details-page .loan-summary-card {
+    border: 0 !important;
+    border-bottom: 4px solid #f6c343 !important;
+    border-radius: 1rem;
+    background: linear-gradient(145deg, #172033, #273c5a) !important;
+    box-shadow: 0 .65rem 1.5rem rgba(28, 43, 66, .16) !important;
+    color: #f8fafc !important;
+}
+
+.loan-details-page .loan-summary-card h3,
+.loan-details-page .loan-summary-card h4,
+.loan-details-page .loan-summary-card h5,
+.loan-details-page .loan-summary-card small {
+    color: #f8fafc !important;
+}
+
+.loan-details-page .loan-summary-card .loan-summary-total {
+    color: #f6c343 !important;
+}
+
+.loan-details-page .loan-summary-card .border-bottom {
+    border-color: rgba(255, 255, 255, .2) !important;
+}
+
+.loan-details-page .card img {
+    border: 1px solid #e1e7ef;
+    border-radius: .8rem !important;
+    background: #f8fafc;
+}
+
+.loan-details-page .form-control,
+.loan-details-page .input-group-text {
+    border-color: #cfd8e4;
+    border-radius: .65rem;
+}
+
+.loan-details-page .form-control:focus {
+    border-color: #d7aa32;
+    box-shadow: 0 0 0 .2rem rgba(246, 195, 67, .22);
+}
+
+@media (max-width: 767.98px) {
+    .loan-details-page {
+        padding-top: 1rem !important;
+    }
+}

@@ -65,8 +65,8 @@ $status_class = [
 ];
 ?>
 <?php ob_start(); ?>
-    <div class="container py-4">
-    <div class="mb-3">
+    <div class="container py-4 loan-details-page">
+    <div class="mb-3 loan-details-back">
         <a href="manage_loans.php" class="btn btn-outline-primary">
             <i class="bi bi-arrow-left me-2"></i>Back
         </a>
@@ -208,7 +208,7 @@ $status_class = [
         <!-- Right Column: Summary + Admin Actions -->
         <div class="col-12 col-md-4 d-flex flex-column gap-3">
             <!-- Loan Summary -->
-            <div class="card bg-primary text-white border-0 shadow-sm p-4 mb-3 flex-shrink-0">
+            <div class="card bg-primary text-white border-0 shadow-sm p-4 mb-3 flex-shrink-0 loan-summary-card">
                 <h5 class="mb-3"><i class="bi bi-calculator me-2"></i>Loan Summary</h5>
                 <div class="mb-2 pb-2 border-bottom border-white border-opacity-25">
                     <small class="opacity-75">Principal</small>
@@ -232,7 +232,7 @@ $status_class = [
                 </div>
                 <div>
                     <small class="opacity-75">Total Amount</small>
-                    <h3 class="mb-0 fw-bold"><?php echo $currency_symbol . number_format($loan['total_amount'],2); ?></h3>
+                    <h3 class="mb-0 fw-bold loan-summary-total"><?php echo $currency_symbol . number_format($loan['total_amount'],2); ?></h3>
                 </div>
             </div>
 
@@ -274,4 +274,4 @@ $status_class = [
 
 <?php
 $content = ob_get_clean();
-renderAdminPage('Loan Details - #' . $loan_id, $content);
+renderAdminPage('Loan Details - #' . $loan_id, $content, '../Loan-system/loan_details.css');

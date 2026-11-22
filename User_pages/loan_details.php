@@ -32,8 +32,8 @@ $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $currency_symbol = ($loan['currency'] ?? 'PHP') === 'SGD' ? '$' : '₱';
 ob_start();
 ?>
-    <div class="container py-4">
-        <div class="mb-3">
+    <div class="container py-4 loan-details-page">
+        <div class="mb-3 loan-details-back">
             <a href="user_dashboard.php" class="btn btn-outline-dark">
                 <i class="bi bi-arrow-left me-2"></i>Back
             </a>
@@ -177,7 +177,7 @@ ob_start();
             
             <div class="col-lg-4">
                 <!-- Loan Summary -->
-                <div class="card bg-dark text-white border-bottom border-warning border-4 shadow-sm p-4 mb-4">
+                <div class="card bg-dark text-white border-bottom border-warning border-4 shadow-sm p-4 mb-4 loan-summary-card">
                     <h5 class="mb-4"><i class="bi bi-calculator me-2"></i>Loan Summary</h5>
                     
                     <div class="mb-3 pb-3 border-bottom border-white border-opacity-25">
@@ -207,7 +207,7 @@ ob_start();
                     
                     <div>
                         <small class="opacity-75">Total Amount Payable</small>
-                        <h3 class="mb-0 fw-bold"><?php echo $currency_symbol . number_format($loan['total_amount'], 2); ?></h3>
+                        <h3 class="mb-0 fw-bold loan-summary-total"><?php echo $currency_symbol . number_format($loan['total_amount'], 2); ?></h3>
                     </div>
                 </div>
                 
@@ -244,4 +244,4 @@ ob_start();
     
 <?php
 $content = ob_get_clean();
-renderUserPage('Loan Details - #' . $loan_id, $content);
+renderUserPage('Loan Details - #' . $loan_id, $content, '../Loan-system/loan_details.css');

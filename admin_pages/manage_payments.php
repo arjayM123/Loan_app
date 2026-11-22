@@ -9,6 +9,10 @@ if (!isLoggedIn() || !isAdmin()) {
 $db = Database::getInstance()->getConnection();
 $success = '';
 $error = '';
+$loan_id = isset($_GET['loan_id']) ? intval($_GET['loan_id']) : 0;
+if (empty($_SESSION['manage_payments_csrf'])) {
+    $_SESSION['manage_payments_csrf'] = bin2hex(random_bytes(32));
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_payment_action'])) {
     $bulk_action = sanitize($_POST['bulk_payment_action']);
@@ -16,8 +20,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_payment_action'])
 
     try {
         if ($bulk_action === 'mark_paid') {
+            $db->beginTransaction();
+            $stmt = $db->prepare("SELECT id, amount FROM payment_schedule WHERE loan_id = ? AND status <> 'paid'");
+            $stmt->execute([$bulk_loan_id]);
+            $newly_paid_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
             $stmt = $db->prepare("UPDATE payment_schedule SET status = 'paid', paid_date = NOW() WHERE loan_id = ? AND status <> 'paid'");
             $stmt->execute([$bulk_loan_id]);
+            $payment_stmt = $db->prepare("INSERT INTO payments (loan_id, schedule_id, amount, payment_method) VALUES (?, ?, ?, 'Manual')");
+            foreach ($newly_paid_rows as $newly_paid_row) {
+                $payment_stmt->execute([$bulk_loan_id, $newly_paid_row['id'], $newly_paid_row['amount']]);
+            }
+            $db->commit();
             $success = 'All remaining payments were marked as paid.';
         } elseif ($bulk_action === 'reset_pending') {
             $stmt = $db->prepare("UPDATE payment_schedule SET status = 'pending', paid_date = NULL WHERE loan_id = ?");
@@ -38,8 +52,84 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_payment_action'])
             $stmt->execute([$bulk_loan_id]);
             $success = 'All payments were marked as paid and the loan is completed.';
         }
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
         $error = 'Error updating all payments: ' . $e->getMessage();
+    }
+}
+
+// Change the application start date and rebuild all installment due dates from it.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reschedule_payments'])) {
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    $posted_loan_id = filter_var($_POST['loan_id'] ?? null, FILTER_VALIDATE_INT);
+    $start_date_value = $_POST['application_start_date'] ?? '';
+    $start_date = is_string($start_date_value)
+        ? DateTimeImmutable::createFromFormat('!Y-m-d', $start_date_value)
+        : false;
+    $date_errors = DateTimeImmutable::getLastErrors();
+    $reset_statuses = isset($_POST['reset_statuses']) && $_POST['reset_statuses'] === '1';
+
+    if (!is_string($csrf_token) || !hash_equals($_SESSION['manage_payments_csrf'], $csrf_token)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } elseif ($posted_loan_id === false || $posted_loan_id !== $loan_id || $loan_id <= 0) {
+        $error = 'Invalid loan selected for rescheduling.';
+    } elseif ($start_date === false
+        || $start_date->format('Y-m-d') !== $start_date_value
+        || ($date_errors !== false && ($date_errors['warning_count'] > 0 || $date_errors['error_count'] > 0))) {
+        $error = 'Choose a valid application start date.';
+    } else {
+        try {
+            $stmt = $db->prepare('SELECT payment_day FROM loan_applications WHERE id = ?');
+            $stmt->execute([$loan_id]);
+            $schedule_loan = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$schedule_loan) {
+                throw new RuntimeException('Loan not found.');
+            }
+
+            $stmt = $db->prepare('SELECT id, payment_number FROM payment_schedule WHERE loan_id = ? ORDER BY payment_number');
+            $stmt->execute([$loan_id]);
+            $schedule_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!$schedule_rows) {
+                throw new RuntimeException('There is no payment schedule to move.');
+            }
+
+            $payment_day = max(1, min(31, (int) $schedule_loan['payment_day']));
+            $reset_sql = $reset_statuses ? ", status = 'pending', paid_date = NULL" : '';
+            $update_schedule = $db->prepare('UPDATE payment_schedule SET due_date = ?' . $reset_sql . ' WHERE id = ?');
+            $base_month = $start_date->modify('first day of this month');
+
+            $db->beginTransaction();
+            if ($reset_statuses) {
+                $stmt = $db->prepare("UPDATE loan_applications SET application_date = ?, status = 'approved' WHERE id = ?");
+            } else {
+                $stmt = $db->prepare('UPDATE loan_applications SET application_date = ? WHERE id = ?');
+            }
+            $stmt->execute([$start_date->format('Y-m-d 00:00:00'), $loan_id]);
+
+            foreach ($schedule_rows as $schedule_row) {
+                $payment_number = max(1, (int) $schedule_row['payment_number']);
+                $due_month = $base_month->modify('+' . $payment_number . ' months');
+                $due_date = $due_month->setDate(
+                    (int) $due_month->format('Y'),
+                    (int) $due_month->format('m'),
+                    min($payment_day, (int) $due_month->format('t'))
+                );
+                $update_schedule->execute([$due_date->format('Y-m-d'), $schedule_row['id']]);
+            }
+
+            $db->commit();
+            $success = 'Application start date saved and payment schedule moved.';
+            if ($reset_statuses) {
+                $success .= ' All installments were reset to pending.';
+            }
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            $error = 'Could not move the payment schedule. Please try again.';
+        }
     }
 }
 
@@ -100,9 +190,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_payment'])) {
     }
 }
 
-// Get loan ID from query string
-$loan_id = isset($_GET['loan_id']) ? intval($_GET['loan_id']) : 0;
-
 if ($loan_id > 0) {
     // Get loan details
     $stmt = $db->prepare("SELECT la.*, COALESCE(u.full_name, la.applicant_name) as user_name
@@ -161,12 +248,7 @@ if ($loan_id > 0) {
 }
 ?>
 <?php ob_start(); ?>
-    <div class="container py-4">
-        <div class="mb-3">
-            <a href="loan_details.php?id=<?php echo $loan_id; ?>" class="btn btn-outline-primary">
-                <i class="bi bi-arrow-left me-2"></i>Back to Loan Details
-            </a>
-        </div>
+    <div class="container py-4 payment-management-page">
         
         <?php if ($success): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -191,35 +273,36 @@ if ($loan_id > 0) {
                 </div>
                 <div class="d-flex align-items-center gap-2 align-self-start align-self-sm-center">
                     <span class="badge bg-dark fs-6"><?php echo $currency_symbol; ?> currency</span>
-                    <button class="btn btn-outline-dark" type="button" data-bs-toggle="collapse" data-bs-target="#paymentSettings" aria-expanded="false" aria-controls="paymentSettings" title="Payment settings">
-                        <i class="bi bi-gear-fill"></i><span class="visually-hidden">Payment settings</span>
-                    </button>
                 </div>
             </div>
-            <div class="collapse mt-3" id="paymentSettings">
-                <div class="border-top pt-3">
-                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-3">
-                        <div>
-                            <h6 class="mb-1">Quick actions</h6>
-                            <p class="text-muted small mb-0">Use these only when the payment records are verified.</p>
-                        </div>
-                        <div class="d-flex flex-column flex-sm-row gap-2">
-                            <form method="POST">
-                                <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
-                                <button type="submit" name="bulk_payment_action" value="mark_paid" class="btn btn-success btn-sm w-100">
-                                    <i class="bi bi-check-all me-1"></i>Mark all paid
-                                </button>
-                            </form>
-                            <form method="POST">
-                                <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
-                                <button type="submit" name="bulk_payment_action" value="reset_pending" class="btn btn-outline-warning btn-sm w-100">
-                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Reset pending
-                                </button>
-                            </form>
-                        </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4 mb-4" id="scheduleDateSettings">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-3">
+                <div>
+                    <h5 class="mb-1"><i class="bi bi-calendar2-range me-2"></i>Move Payment Schedule</h5>
+                    <p class="text-muted small mb-0">Set a new application start date and recalculate installment dates.</p>
+                </div>
+                <span class="badge bg-light text-dark border">Start date: <?php echo date('M d, Y', strtotime($loan['application_date'])); ?></span>
+            </div>
+            <form method="POST" class="row g-3 align-items-end" id="rescheduleScheduleForm">
+                <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['manage_payments_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
+                <input type="hidden" name="reschedule_payments" value="1">
+                <div class="col-12 col-md-5">
+                    <label class="form-label fw-semibold" for="applicationStartDate">New application start date</label>
+                    <input type="date" class="form-control" id="applicationStartDate" name="application_start_date" value="<?php echo htmlspecialchars(substr($loan['application_date'], 0, 10), ENT_QUOTES, 'UTF-8'); ?>" required>
+                </div>
+                <div class="col-12 col-md-4">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="resetStatuses" name="reset_statuses" value="1">
+                        <label class="form-check-label" for="resetStatuses">Also reset all payments to pending</label>
                     </div>
                 </div>
-            </div>
+                <div class="col-12">
+                    <small class="text-muted">The first installment is due one month after the start date, then monthly on the loan's saved payment day. Payment amounts and history are kept.</small>
+                </div>
+            </form>
         </div>
 
         <div class="alert alert-warning d-flex align-items-start gap-2 shadow-sm" role="note">
@@ -359,6 +442,33 @@ if ($loan_id > 0) {
         </div>
     </div>
     
+    <div class="payment-action-rail" aria-label="Payment management actions">
+        <a class="btn btn-outline-secondary" href="loan_details.php?id=<?php echo $loan_id; ?>" aria-label="Back to loan details" title="Back to loan details">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <a class="btn btn-primary" href="payment_history.php?loan_id=<?php echo $loan_id; ?>" aria-label="Payment history" title="Payment history">
+            <i class="bi bi-clock-history"></i>
+        </a>
+        <a class="btn btn-outline-primary" href="#scheduleDateSettings" aria-label="Move payment schedule" title="Move payment schedule">
+            <i class="bi bi-calendar2-range"></i>
+        </a>
+        <button class="btn btn-warning" type="submit" form="rescheduleScheduleForm" aria-label="Save schedule date" title="Save schedule date">
+            <i class="bi bi-calendar2-check"></i>
+        </button>
+        <form method="POST" class="payment-bulk-action" data-confirm="Mark every installment as paid?">
+            <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
+            <button type="submit" name="bulk_payment_action" value="mark_paid" class="btn btn-success" aria-label="Mark all payments paid" title="Mark all payments paid">
+                <i class="bi bi-check-all"></i>
+            </button>
+        </form>
+        <form method="POST" class="payment-bulk-action" data-confirm="Reset every installment to pending? Existing payment history will remain recorded.">
+            <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
+            <button type="submit" name="bulk_payment_action" value="reset_pending" class="btn btn-outline-warning" aria-label="Reset all payments to pending" title="Reset all payments to pending">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+        </form>
+    </div>
+
     <!-- Hidden form for status updates -->
     <form id="paymentForm" method="POST" class="visually-hidden">
         <input type="hidden" name="schedule_id" id="scheduleId">
@@ -415,8 +525,16 @@ if ($loan_id > 0) {
         document.getElementById('confirmPaymentButton').addEventListener('click', function () {
             document.getElementById('paymentForm').submit();
         });
+
+        document.querySelectorAll('.payment-bulk-action').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (!confirm(form.dataset.confirm)) {
+                    event.preventDefault();
+                }
+            });
+        });
         
     </script>
 <?php
 $content = ob_get_clean();
-renderAdminPage('Payment Management - Loan #' . $loan_id, $content);
+renderAdminPage('Payment Management - Loan #' . $loan_id, $content, '../Loan-system/payment_management.css');

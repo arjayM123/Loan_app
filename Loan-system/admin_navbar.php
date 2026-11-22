@@ -21,6 +21,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link px-3 py-2 rounded" href="payment_history.php">
+                        <i class="bi bi-clock-history me-1"></i>Payment History
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link px-3 py-2 rounded" href="create_loan.php">
                         <i class="bi bi-file-earmark-plus me-1"></i>Create Loan
                     </a>
