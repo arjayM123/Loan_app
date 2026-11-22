@@ -107,6 +107,33 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <?php ob_start(); ?>
     <style>
+        body { background: #edf1f6; }
+        .loan-page-container { max-width: 1280px; padding-bottom: 4rem; }
+        .loan-page-panel { margin-top: 1.5rem; }
+        .loan-page-heading { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1.5rem; padding: 1.5rem; border-radius: 1.15rem; color: #fff; background: linear-gradient(120deg, #172033, #273c5a); box-shadow: 0 .75rem 1.75rem rgba(28,43,66,.16); }
+        .loan-page-kicker { margin-bottom: .35rem; color: #f6c343; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+        .loan-page-heading h1 { margin: 0; font-size: clamp(1.45rem,2.5vw,2rem); font-weight: 700; }
+        .loan-page-heading p { margin: .4rem 0 0; color: rgba(255,255,255,.72); }
+        .loan-count-card { min-width: 115px; padding: .8rem 1rem; border: 1px solid rgba(255,255,255,.16); border-radius: .9rem; background: rgba(255,255,255,.08); text-align: center; }
+        .loan-count-card strong { display: block; font-size: 1.65rem; line-height: 1.1; }
+        .loan-count-card span { color: rgba(255,255,255,.72); font-size: .8rem; }
+        .loan-page-alert { border: 0; border-radius: .85rem; box-shadow: 0 .25rem .8rem rgba(28,43,66,.06); }
+        .loan-grid { row-gap: 1rem; }
+        .loan-card { overflow: hidden; border: 1px solid #d5deea !important; border-radius: 1rem; background: #fff; box-shadow: 0 .3rem 1rem rgba(28,43,66,.09) !important; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .loan-card:hover { transform: translateY(-3px); border-color: #aebdd0 !important; box-shadow: 0 .85rem 1.7rem rgba(28,43,66,.16) !important; }
+        .loan-card-link { display: block; padding: 1.2rem; color: #172033 !important; text-decoration: none; }
+        .loan-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: .75rem; padding-bottom: .9rem; border-bottom: 1px solid #edf0f5; }
+        .loan-card-meta { color: #718096; font-size: .78rem; line-height: 1.5; }
+        .loan-card-meta strong { color: #3d4b61; }
+        .loan-status-badge { flex: 0 0 auto; padding: .42rem .65rem; border-radius: 999px; font-size: .72rem; font-weight: 700; letter-spacing: .02em; }
+        .loan-card-main { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: end; gap: 1rem; padding-top: 1rem; }
+        .loan-field-label { display: block; margin-bottom: .25rem; color: #7b8798; font-size: .72rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+        .loan-customer-name { margin: 0; color: #172033; font-size: 1.05rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+        .loan-amount-block { text-align: right; white-space: nowrap; }
+        .loan-amount-value { color: #1e3658; font-size: 1.2rem; font-weight: 750; letter-spacing: -.02em; }
+        .loan-card-footer { display: flex; align-items: center; gap: .5rem; min-height: 3.4rem; padding: .65rem 1.2rem; border-top: 1px solid #edf0f5; background: #fafbfd; }
+        .loan-card-footer .btn { width: 2.1rem; height: 2.1rem; display: inline-flex; align-items: center; justify-content: center; border-radius: .65rem; }
+        .loan-empty-state { padding: 3.5rem 1rem; border: 1px dashed #cbd5e1; border-radius: 1rem; background: rgba(255,255,255,.72); text-align: center; }
         .loan-action-rail {
             position: fixed;
             top: 50%;
@@ -132,23 +159,38 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
         @media (max-width: 575.98px) {
             .loan-action-rail { right: .5rem; padding: .45rem; }
             .loan-action-rail .btn { width: 44px; height: 44px; }
+            .loan-page-heading { align-items: flex-start; padding: 1.15rem; }
+            .loan-count-card { min-width: 82px; padding: .65rem .7rem; }
+            .loan-count-card strong { font-size: 1.35rem; }
+            .loan-card-link { padding: 1rem; }
+            .loan-card-footer { padding-inline: 1rem; }
+            .loan-card-main { gap: .65rem; }
+            .loan-amount-value { font-size: 1.05rem; }
         }
     </style>
-    <div class="container">
-        <div class="card border-0 shadow-sm p-4 mt-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3><i class="bi bi-folder2-open me-2"></i>Manage Loan Applications</h3>
-            </div>
+    <div class="container loan-page-container">
+        <div class="loan-page-panel">
+            <header class="loan-page-heading">
+                <div>
+                    <div class="loan-page-kicker">Loan management</div>
+                    <h1>Applications</h1>
+                    <p>Review loan requests and manage their status.</p>
+                </div>
+                <div class="loan-count-card" aria-label="Number of loan applications shown">
+                    <strong><?php echo count($loans); ?></strong>
+                    <span><?php echo count($loans) === 1 ? 'application' : 'applications'; ?></span>
+                </div>
+            </header>
             
             <?php if ($success !== ''): ?>
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <div class="alert alert-success alert-dismissible fade show loan-page-alert" role="alert">
                     <i class="bi bi-check-circle-fill me-2"></i><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
             <?php endif; ?>
             
             <?php if ($error !== ''): ?>
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <div class="alert alert-danger alert-dismissible fade show loan-page-alert" role="alert">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
@@ -166,30 +208,33 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <!-- Responsive Loans Display -->
             <?php if (count($loans) > 0): ?>
                 
-                <div class="row g-3" id="loanCards">
+                <div class="row g-3 loan-grid" id="loanCards">
                     <?php foreach ($loans as $loan): ?>
                         <?php $symbol = $currency_symbol($loan['currency'] ?? 'PHP'); ?>
-                        <div class="col-12 col-lg-6">
-                            <div class="card loan-card h-100 shadow-sm border-0" data-loan-id="<?php echo (int) $loan['id']; ?>">
-                                <a href="loan_details.php?id=<?php echo $loan['id']; ?>" class="card-body text-decoration-none text-dark">
-                                    <div class="d-flex justify-content-between align-items-start gap-2">
-                                        <div>
+                        <div class="col-12 col-md-6 col-xl-4">
+                            <article class="card loan-card h-100 shadow-sm" data-loan-id="<?php echo (int) $loan['id']; ?>">
+                                <a href="loan_details.php?id=<?php echo $loan['id']; ?>" class="loan-card-link">
+                                    <div class="loan-card-top">
+                                        <div class="loan-card-meta">
                                             <p class="text-muted small mb-3">Application #<?php echo $loan['id']; ?> · <?php echo date('M d, Y', strtotime($loan['application_date'])); ?></p>
                                         </div>
-                                        <span class="badge <?php echo $badge_class[$loan['status']] ?? 'bg-secondary'; ?>">
+                                        <span class="badge loan-status-badge <?php echo $badge_class[$loan['status']] ?? 'bg-secondary'; ?>">
                                             <?php echo ucfirst($loan['status']); ?>
                                         </span>
                                     </div>
-                                    <div class="d-flex justify-content-between align-items-end gap-2">
-                                        <h5 class="card-title mb-0"><?php echo htmlspecialchars($loan['applicant_name']); ?></h5>
-                                        <div class="text-end flex-shrink-0">
-                                            <span class="text-muted d-block small">Loan amount</span>
-                                            <strong><?php echo $symbol . number_format($loan['loan_amount'], 2); ?></strong>
+                                    <div class="loan-card-main">
+                                        <div>
+                                            <span class="loan-field-label">Customer</span>
+                                            <h2 class="loan-customer-name"><?php echo htmlspecialchars($loan['applicant_name'], ENT_QUOTES, 'UTF-8'); ?></h2>
+                                        </div>
+                                        <div class="loan-amount-block">
+                                            <span class="loan-field-label">Loan amount</span>
+                                            <strong class="loan-amount-value"><?php echo $symbol . number_format($loan['loan_amount'], 2); ?></strong>
                                         </div>
                                     </div>
                                     
                                 </a>
-                                <div class="card-footer bg-transparent border-0 pt-0 d-flex gap-2">
+                                <div class="loan-card-footer">
                                     <?php if ($loan['status'] === 'pending'): ?>
                                         <button type="button" class="btn btn-sm btn-success" onclick="updateStatus(<?php echo (int) $loan['id']; ?>, 'approved')" aria-label="Approve loan">
                                             <i class="bi bi-check-lg"></i>
@@ -203,15 +248,16 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                         <span>Select</span>
                                     </label>
                                 </div>
-                            </div>
+                            </article>
                         </div>
                     <?php endforeach; ?>
                 </div>
 
             <?php else: ?>
-                <div class="text-center py-5">
-                    <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
-                    <p class="text-muted">No loan applications found</p>
+                <div class="loan-empty-state">
+                    <i class="bi bi-inbox fs-1 text-secondary"></i>
+                    <h4 class="mt-3">No applications found</h4>
+                    <p class="text-muted mb-0">Try another status filter or create a loan application.</p>
                 </div>
             <?php endif; ?>
         </div>
@@ -391,7 +437,7 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             checkbox.addEventListener('change', updateSelectionDisplay);
         });
 
-        document.querySelectorAll('.loan-card .card-body[href]').forEach(function (link) {
+        document.querySelectorAll('.loan-card .loan-card-link[href]').forEach(function (link) {
             link.addEventListener('click', function (event) {
                 if (selectionMode) {
                     event.preventDefault();
