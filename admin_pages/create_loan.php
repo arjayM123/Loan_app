@@ -179,11 +179,11 @@ $selected_loan_term = (int) $read_post_text('monthlyTerm');
 $selected_payment_day = (int) $read_post_text('dueDate');
 ?>
 <?php ob_start(); ?>
-<div class="container py-4">
+<div class="container py-4 loan-application-page">
     <div class="row justify-content-center">
         <div class="col-lg-10">
-            <div class="card border-0 shadow-sm overflow-hidden">
-                <div class="card-header bg-dark text-white border-bottom border-warning border-4 p-4 p-md-5">
+            <div class="card border-0 shadow-sm overflow-hidden loan-application-card">
+                <div class="card-header bg-dark text-white border-bottom border-warning border-4 p-4 p-md-5 loan-application-header">
                     <div class="d-flex align-items-center">
                         <i class="bi bi-file-earmark-text fs-1 me-3"></i>
                         <div>
@@ -193,7 +193,7 @@ $selected_payment_day = (int) $read_post_text('dueDate');
                     </div>
                 </div>
 
-                <div class="card-body p-4">
+                <div class="card-body p-4 loan-application-body">
                     <?php if ($success): ?>
                         <div class="alert alert-success alert-dismissible fade show" role="alert">
                             <i class="bi bi-check-circle-fill me-2"></i><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
@@ -210,7 +210,7 @@ $selected_payment_day = (int) $read_post_text('dueDate');
                         </div>
                     <?php endif; ?>
 
-                    <form id="loanForm" method="POST" enctype="multipart/form-data">
+                    <form id="loanForm" class="loan-application-form" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['admin_create_loan_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
 
                         <h4 class="border-bottom border-warning pb-2 mb-4"><i class="bi bi-person-circle me-2 text-warning"></i>Personal Information</h4>
@@ -363,4 +363,4 @@ $selected_payment_day = (int) $read_post_text('dueDate');
 </script>
 <?php
 $content = ob_get_clean();
-renderAdminPage('Create Loan', $content);
+renderAdminPage('Create Loan', $content, '../Loan-system/loan_application.css');

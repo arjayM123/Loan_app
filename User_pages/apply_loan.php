@@ -38,7 +38,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $currency = 'PHP';
             }
             $loan_amount = floatval($_POST['loanAmount'] ?? 0);
-            $interest_rate = floatval($_POST['interestRate'] ?? 0);
+            // The monthly interest rate is fixed by the system and is not customer-editable.
+            $interest_rate = 10.0;
             $loan_term = intval($_POST['monthlyTerm'] ?? 0);
             $payment_day = intval($_POST['dueDate'] ?? 1);
 
@@ -114,11 +115,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 ?>
 
 <?php ob_start(); ?>
-    <div class="container py-4">
+    <div class="container py-4 loan-application-page">
         <div class="row justify-content-center">
             <div class="col-lg-10">
-                <div class="card border-0 shadow-sm overflow-hidden">
-                    <div class="card-header bg-dark text-white border-bottom border-warning border-4 p-4 p-md-5">
+                <div class="card border-0 shadow-sm overflow-hidden loan-application-card">
+                    <div class="card-header bg-dark text-white border-bottom border-warning border-4 p-4 p-md-5 loan-application-header">
                         <div class="d-flex align-items-center">
                             <i class="bi bi-file-earmark-text fs-1 me-3"></i>
                             <div>
@@ -128,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </div>
                     </div>
                     
-                    <div class="card-body p-4">
+                    <div class="card-body p-4 loan-application-body">
                         <?php if ($success): ?>
                             <div class="alert alert-success alert-dismissible fade show" role="alert">
                                 <i class="bi bi-check-circle-fill me-2"></i><?php echo $success; ?>
@@ -143,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             </div>
                         <?php endif; ?>
                         
-                        <form id="loanForm" method="POST" enctype="multipart/form-data">
+                        <form id="loanForm" class="loan-application-form" method="POST" enctype="multipart/form-data">
                             <!-- Personal Information -->
                             <h4 class="border-bottom border-warning pb-2 mb-4"><i class="bi bi-person-circle me-2 text-warning"></i>Personal Information</h4>
                             
@@ -319,4 +320,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </script>
 <?php
 $content = ob_get_clean();
-renderUserPage('Loan Application', $content);
+renderUserPage('Loan Application', $content, '../Loan-system/loan_application.css');

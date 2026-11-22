@@ -1,0 +1,158 @@
+body,
+body.bg-light {
+    background: #edf1f6 !important;
+}
+
+.loan-application-page {
+    max-width: 1140px;
+    padding-top: 2rem !important;
+    padding-bottom: 3rem !important;
+}
+
+.loan-application-card {
+    overflow: hidden;
+    border: 1px solid #d5deea !important;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 .5rem 1.5rem rgba(28, 43, 66, .1) !important;
+}
+
+.loan-application-header {
+    border-bottom-color: #f6c343 !important;
+    background: linear-gradient(120deg, #172033, #273c5a) !important;
+}
+
+.loan-application-header h2 {
+    font-weight: 700;
+    letter-spacing: -.02em;
+}
+
+.loan-application-header .bi {
+    color: #f6c343;
+}
+
+.loan-application-body {
+    padding: clamp(1.25rem, 3vw, 2rem) !important;
+}
+
+.loan-application-form h4 {
+    color: #1c2b42;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+.loan-application-form .form-label {
+    color: #34445d;
+}
+
+.loan-application-form .form-control,
+.loan-application-form .form-select,
+.loan-application-form .input-group-text {
+    min-height: 2.8rem;
+    border-color: #cfd8e4;
+    border-radius: .65rem;
+}
+
+.loan-application-form .input-group-text {
+    background: #f3f6fa;
+    color: #34445d;
+}
+
+.loan-application-form .input-group > .input-group-text:first-child {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.loan-application-form .input-group > .form-control:not(:first-child),
+.loan-application-form .input-group > .form-select:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.loan-application-form .form-control:focus,
+.loan-application-form .form-select:focus {
+    border-color: #d7aa32;
+    box-shadow: 0 0 0 .2rem rgba(246, 195, 67, .22);
+}
+
+.loan-application-form input[readonly] {
+    background: #f3f6fa !important;
+}
+
+.loan-application-form .term-btn,
+.loan-application-form .day-btn {
+    border-color: #d6a927;
+    color: #805f0c;
+    font-weight: 600;
+}
+
+.loan-application-form .term-btn:hover,
+.loan-application-form .day-btn:hover,
+.loan-application-form .term-btn.active,
+.loan-application-form .day-btn.active {
+    border-color: #f1bd37;
+    background: #f6c343;
+    color: #172033;
+}
+
+.loan-application-form .btn-warning {
+    border-color: #f0ba31;
+    background: #f6c343;
+    color: #172033;
+    font-weight: 700;
+}
+
+.loan-application-form .btn-warning:hover {
+    border-color: #dda91f;
+    background: #eeb52c;
+    color: #172033;
+}
+
+.loan-application-form #calculationSummary .card.bg-dark {
+    padding: 1.25rem;
+    border-radius: .9rem;
+    background: #172033 !important;
+    color: #f8fafc;
+}
+
+.loan-application-form #calculationSummary .card.bg-dark h6 {
+    color: #c4d0df;
+}
+
+.loan-application-form #calculationSummary .card.bg-dark h3,
+.loan-application-form #calculationSummary .card.bg-dark h4 {
+    color: #fff;
+    font-weight: 700;
+}
+
+.loan-application-form #calculationSummary .card.bg-dark #totalDisplay {
+    color: #f6c343;
+}
+
+.loan-application-form #paymentSchedule {
+    border: 1px solid #e0e6ee;
+}
+
+.loan-application-form #paymentSchedule .table {
+    --bs-table-bg: transparent;
+    --bs-table-striped-bg: #f3f6fa;
+}
+
+.loan-application-form .alert {
+    border: 0;
+    border-radius: .8rem;
+}
+
+@media (max-width: 575.98px) {
+    .loan-application-page {
+        padding-top: 1rem !important;
+    }
+
+    .loan-application-header {
+        padding: 1.5rem !important;
+    }
+
+    .loan-application-header .fs-1 {
+        font-size: 2rem !important;
+    }
+}

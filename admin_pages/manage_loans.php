@@ -381,7 +381,7 @@ $loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
             const allSelected = checkboxes.length > 0 && selected.length === checkboxes.length;
 
             selectedLoanCount.textContent = selected.length + ' selected';
-            deleteActionButton.disabled = !selectionMode || selected.length === 0;
+            deleteActionButton.disabled = checkboxes.length === 0 || (selectionMode && selected.length === 0);
             deleteActionButton.classList.toggle('btn-outline-danger', !selectionMode);
             deleteActionButton.classList.toggle('btn-danger', selectionMode);
             deleteActionButton.setAttribute('aria-label', selectionMode ? 'Delete selected loans' : 'Select loans for deletion');
