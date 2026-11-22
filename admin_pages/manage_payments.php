@@ -105,7 +105,7 @@ $loan_id = isset($_GET['loan_id']) ? intval($_GET['loan_id']) : 0;
 
 if ($loan_id > 0) {
     // Get loan details
-    $stmt = $db->prepare("SELECT la.*, u.full_name as user_name 
+    $stmt = $db->prepare("SELECT la.*, COALESCE(u.full_name, la.applicant_name) as user_name
                           FROM loan_applications la 
                           LEFT JOIN users u ON la.user_id = u.id 
                           WHERE la.id = ?");

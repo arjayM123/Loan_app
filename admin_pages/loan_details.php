@@ -103,14 +103,14 @@ $status_class = [
                 <div class="border-bottom py-3">
                     <div class="row">
                         <div class="col-5 col-md-4"><strong>Applicant Name:</strong></div>
-                        <div class="col-7 col-md-8"><?php echo $loan['applicant_name']; ?></div>
+                        <div class="col-7 col-md-8"><?php echo htmlspecialchars($loan['applicant_name'], ENT_QUOTES, 'UTF-8'); ?></div>
                     </div>
                 </div>
                 <?php if ($loan['phone']): ?>
                 <div class="border-bottom py-3">
                     <div class="row">
                         <div class="col-5 col-md-4"><strong>Phone:</strong></div>
-                        <div class="col-7 col-md-8"><?php echo $loan['phone']; ?></div>
+                        <div class="col-7 col-md-8"><?php echo htmlspecialchars($loan['phone'], ENT_QUOTES, 'UTF-8'); ?></div>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -118,7 +118,7 @@ $status_class = [
                 <div class="py-3">
                     <div class="row">
                         <div class="col-5 col-md-4"><strong>Address:</strong></div>
-                        <div class="col-7 col-md-8"><?php echo $loan['address']; ?></div>
+                        <div class="col-7 col-md-8"><?php echo nl2br(htmlspecialchars($loan['address'], ENT_QUOTES, 'UTF-8')); ?></div>
                     </div>
                 </div>
                 <?php endif; ?>

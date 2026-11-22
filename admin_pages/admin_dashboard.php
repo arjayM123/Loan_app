@@ -141,7 +141,7 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <?php foreach ($recent_loans as $loan): ?>
                                 <tr>
                                     <td>#<?php echo $loan['id']; ?></td>
-                                    <td><?php echo $loan['applicant_name']; ?></td>
+                                    <td><?php echo htmlspecialchars($loan['applicant_name'], ENT_QUOTES, 'UTF-8'); ?></td>
                                     <td><?php echo ($loan['currency'] ?? 'PHP') === 'SGD' ? '$' : '₱'; ?><?php echo number_format($loan['loan_amount'], 2); ?></td>
                                     <td><?php echo $loan['interest_rate']; ?>%</td>
                                     <td><?php echo $loan['loan_term']; ?>m</td>

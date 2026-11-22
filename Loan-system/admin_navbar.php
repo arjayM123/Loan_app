@@ -20,6 +20,11 @@
                         <i class="bi bi-folder me-1"></i>Manage Loans
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link px-3 py-2 rounded" href="create_loan.php">
+                        <i class="bi bi-file-earmark-plus me-1"></i>Create Loan
+                    </a>
+                </li>
             </ul>
             <ul class="navbar-nav mb-2 mb-lg-0">
                 <li class="nav-item dropdown">

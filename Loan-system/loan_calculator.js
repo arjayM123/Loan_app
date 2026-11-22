@@ -123,7 +123,9 @@ interestRateVisible.value = '10';
         let html = '<div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Payment #</th><th>Amount</th><th>Due Date</th></tr></thead><tbody>';
         
         for (let i = 1; i <= months; i++) {
-            const dueDate = new Date(today.getFullYear(), today.getMonth() + i, day);
+            const dueDate = new Date(today.getFullYear(), today.getMonth() + i, 1);
+            const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + i + 1, 0).getDate();
+            dueDate.setDate(Math.min(day, lastDayOfMonth));
             const dateStr = dueDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
             
             html += `<tr>
