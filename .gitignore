@@ -1,5 +1,5 @@
 .env
 .env.*
-Loan-system/private_config.php
+private_config.php
 User_pages/uploads/*
 !User_pages/uploads/.htaccess
