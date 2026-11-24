@@ -1,5 +1,6 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once '../Loan-system/loan_document_storage.php';
 require_once 'admin_layout.php';
 
 if (!isLoggedIn()) {
@@ -24,27 +25,56 @@ $back_label = $back_to_dashboard ? 'Back to dashboard' : 'Back to loan managemen
 $db = Database::getInstance()->getConnection();
 $success = '';
 $error = '';
+$status_csrf_scope = 'manage_loan_status';
+$status_csrf_token = csrfToken($status_csrf_scope);
+$interest_csrf_scope = 'admin_loan_interest';
+$interest_csrf_token = csrfToken($interest_csrf_scope);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_interest']) && isAdmin()) {
     $new_interest = filter_var($_POST['interest_rate'] ?? null, FILTER_VALIDATE_FLOAT);
-    if ($new_interest === false || $new_interest < 0 || $new_interest > 100) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null, $interest_csrf_scope)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } elseif ($new_interest === false || $new_interest < 0 || $new_interest > 100) {
         $error = 'Interest rate must be between 0 and 100.';
     } else {
         $stmt = $db->prepare('SELECT loan_amount, loan_term FROM loan_applications WHERE id = ?');
         $stmt->execute([$loan_id]);
         $current_loan = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($current_loan) {
-            $monthly_interest = $current_loan['loan_amount'] * ($new_interest / 100);
-            $total_interest = $monthly_interest * $current_loan['loan_term'];
-            $total_amount = $current_loan['loan_amount'] + $total_interest;
-            $monthly_payment = $total_amount / $current_loan['loan_term'];
-            $db->beginTransaction();
-            $stmt = $db->prepare('UPDATE loan_applications SET interest_rate = ?, monthly_payment = ?, total_interest = ?, total_amount = ? WHERE id = ?');
-            $stmt->execute([$new_interest, $monthly_payment, $total_interest, $total_amount, $loan_id]);
-            $stmt = $db->prepare('UPDATE payment_schedule SET amount = ? WHERE loan_id = ?');
-            $stmt->execute([$monthly_payment, $loan_id]);
-            $db->commit();
-            $success = 'Interest rate and payment schedule updated.';
+        if (!$current_loan || (int) $current_loan['loan_term'] < 1) {
+            $error = 'This loan has invalid terms and its interest cannot be updated.';
+        } else {
+            $stmt = $db->prepare('SELECT COUNT(*) FROM payments WHERE loan_id = ?');
+            $stmt->execute([$loan_id]);
+            $recorded_payments = (int) $stmt->fetchColumn();
+            $stmt = $db->prepare("SELECT COUNT(*) FROM payment_schedule WHERE loan_id = ? AND status = 'paid'");
+            $stmt->execute([$loan_id]);
+            $marked_paid_installments = (int) $stmt->fetchColumn();
+            if ($recorded_payments > 0 || $marked_paid_installments > 0) {
+                $error = 'Interest cannot be changed after a payment has been recorded. This protects the payment history.';
+            } else {
+                $monthly_interest = round((float) $current_loan['loan_amount'] * ($new_interest / 100), 2);
+                $total_interest = round($monthly_interest * (int) $current_loan['loan_term'], 2);
+                $total_amount = round((float) $current_loan['loan_amount'] + $total_interest, 2);
+                $monthly_payment = round($total_amount / (int) $current_loan['loan_term'], 2);
+                $last_payment = round($total_amount - ($monthly_payment * ((int) $current_loan['loan_term'] - 1)), 2);
+                try {
+                    $db->beginTransaction();
+                    $stmt = $db->prepare('UPDATE loan_applications SET interest_rate = ?, monthly_payment = ?, total_interest = ?, total_amount = ? WHERE id = ?');
+                    $stmt->execute([$new_interest, $monthly_payment, $total_interest, $total_amount, $loan_id]);
+                    $stmt = $db->prepare("UPDATE payment_schedule SET amount = ? WHERE loan_id = ? AND status <> 'paid'");
+                    $stmt->execute([$monthly_payment, $loan_id]);
+                    $stmt = $db->prepare("UPDATE payment_schedule SET amount = ? WHERE loan_id = ? AND payment_number = ? AND status <> 'paid'");
+                    $stmt->execute([$last_payment, $loan_id, (int) $current_loan['loan_term']]);
+                    $db->commit();
+                    $success = 'Interest rate and payment schedule updated.';
+                } catch (Throwable $e) {
+                    if ($db->inTransaction()) {
+                        $db->rollBack();
+                    }
+                    error_log('Loan interest update failed: ' . $e->getMessage());
+                    $error = 'The interest rate could not be updated. Please try again.';
+                }
+            }
         }
     }
 }
@@ -169,13 +199,13 @@ $status_class = [
                     <?php if ($loan['id_front_path']): ?>
                     <div class="col-6">
                         <p class="fw-semibold mb-1">ID Front</p>
-                        <img src="<?php echo $loan['id_front_path']; ?>" class="img-fluid rounded shadow-sm" alt="ID Front">
+                        <img src="../Loan-system/loan_document.php?id=<?php echo (int) $loan['id']; ?>&amp;side=front" class="img-fluid rounded shadow-sm" alt="ID Front">
                     </div>
                     <?php endif; ?>
                     <?php if ($loan['id_back_path']): ?>
                     <div class="col-6">
                         <p class="fw-semibold mb-1">ID Back</p>
-                        <img src="<?php echo $loan['id_back_path']; ?>" class="img-fluid rounded shadow-sm" alt="ID Back">
+                        <img src="../Loan-system/loan_document.php?id=<?php echo (int) $loan['id']; ?>&amp;side=back" class="img-fluid rounded shadow-sm" alt="ID Back">
                     </div>
                     <?php endif; ?>
                 </div>
@@ -280,6 +310,7 @@ $status_class = [
                 <form method="POST" action="manage_loans.php">
                     <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
                     <input type="hidden" name="update_status" value="1">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($status_csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                     <button type="submit" name="status" value="approved" class="btn btn-success w-100 mb-2">
                         <i class="bi bi-check-circle me-2"></i>Approve Loan
                     </button>
@@ -300,6 +331,7 @@ $status_class = [
         <div class="modal-content border-0 shadow">
             <form method="POST">
                 <input type="hidden" name="update_interest" value="1">
+                <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($interest_csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                 <div class="modal-header bg-dark text-white border-bottom border-warning border-3">
                     <h5 class="modal-title" id="modifyInterestModalTitle">
                         <i class="bi bi-percent text-warning me-2" aria-hidden="true"></i>Modify Interest Rate

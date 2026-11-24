@@ -275,10 +275,6 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     </div>
                                 <?php endforeach; ?>
                             <?php elseif ($metric === 'upcoming'): ?>
-                                <div class="small text-muted mb-2">
-                                    <?php echo number_format($upcoming_loan_count); ?> loan<?php echo $upcoming_loan_count === 1 ? '' : 's'; ?>,
-                                    <?php echo number_format(count($upcoming_schedule)); ?> unpaid installment<?php echo count($upcoming_schedule) === 1 ? '' : 's'; ?> due <?php echo htmlspecialchars($upcoming_period_label, ENT_QUOTES, 'UTF-8'); ?>
-                                </div>
                                 <?php foreach (['PHP', 'SGD'] as $currency): ?>
                                     <div class="dashboard-currency-summary <?php echo $currency === 'SGD' ? 'mt-2' : ''; ?>">
                                         <div class="dashboard-currency-title"><?php echo $currency; ?> upcoming</div>

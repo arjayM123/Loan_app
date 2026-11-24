@@ -1,5 +1,6 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once '../Loan-system/loan_document_storage.php';
 require_once 'admin_layout.php';
 
 if (!isLoggedIn() || !isAdmin()) {
@@ -10,6 +11,8 @@ $db = Database::getInstance()->getConnection();
 $success = '';
 $success_title = '';
 $error = '';
+$status_csrf_scope = 'manage_loan_status';
+$status_csrf_token = csrfToken($status_csrf_scope);
 if (empty($_SESSION['manage_loans_csrf'])) {
     $_SESSION['manage_loans_csrf'] = bin2hex(random_bytes(32));
 }
@@ -22,7 +25,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_status'])) {
     $loan_id = filter_var($_POST['loan_id'] ?? null, FILTER_VALIDATE_INT);
     $new_status = $_POST['status'] ?? '';
 
-    if ($loan_id === false || $loan_id < 1 || !in_array($new_status, ['approved', 'rejected'], true)) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null, $status_csrf_scope)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } elseif ($loan_id === false || $loan_id < 1 || !in_array($new_status, ['approved', 'rejected'], true)) {
         $error = 'The loan status request is invalid. Please try again.';
     } else {
         $loan_stmt = $db->prepare('SELECT applicant_name FROM loan_applications WHERE id = ?');
@@ -81,12 +86,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_selected'])) {
             foreach ($loan_files as $loan_file) {
                 foreach (['id_front_path', 'id_back_path'] as $file_field) {
                     $file_path = $loan_file[$file_field];
-                    if ($file_path && strpos($file_path, '../User_pages/uploads/') === 0) {
-                        $file_path = __DIR__ . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $file_path);
-                    }
-                    if ($file_path && is_file($file_path)) {
-                        unlink($file_path);
-                    }
+                    deleteLoanDocument($file_path);
                 }
             }
 
@@ -327,6 +327,7 @@ if ($success !== '') {
         <input type="hidden" name="loan_id" id="statusLoanId">
         <input type="hidden" name="status" id="statusValue">
         <input type="hidden" name="update_status" value="1">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($status_csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
     </form>
 
     <?php if ($feedback !== null): ?>

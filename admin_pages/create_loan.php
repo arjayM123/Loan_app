@@ -1,5 +1,6 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once '../Loan-system/loan_document_storage.php';
 require_once 'admin_layout.php';
 
 if (!isLoggedIn() || !isAdmin()) {
@@ -96,24 +97,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $id_front_path = null;
             $id_back_path = null;
-            $uploaded_file_paths = [];
+            $stored_documents = [];
             if ($validated_uploads) {
-                $upload_dir = __DIR__ . '/../User_pages/uploads';
-                if (!is_dir($upload_dir) && !mkdir($upload_dir, 0755, true) && !is_dir($upload_dir)) {
-                    throw new RuntimeException('Could not prepare the ID image folder.');
-                }
-
                 foreach ($validated_uploads as $field => $file) {
-                    $filename = 'loan_id_' . bin2hex(random_bytes(12)) . '.' . $file['extension'];
-                    $destination = $upload_dir . DIRECTORY_SEPARATOR . $filename;
-                    if (!move_uploaded_file($file['tmp_name'], $destination)) {
-                        throw new RuntimeException('Could not save an ID image.');
-                    }
-                    $uploaded_file_paths[] = $destination;
+                    $stored_path = storeLoanDocument($_FILES[$field]);
+                    $stored_documents[] = $stored_path;
                     if ($field === 'idFront') {
-                        $id_front_path = '../User_pages/uploads/' . $filename;
+                        $id_front_path = $stored_path;
                     } else {
-                        $id_back_path = '../User_pages/uploads/' . $filename;
+                        $id_back_path = $stored_path;
                     }
                 }
             }
@@ -149,11 +141,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     (int) $due_month->format('m'),
                     min($payment_day, (int) $due_month->format('t'))
                 );
+                $installment_amount = $payment_number === $loan_term
+                    ? round($total_amount - ($monthly_payment * ($loan_term - 1)), 2)
+                    : $monthly_payment;
                 $schedule_stmt->execute([
                     $created_loan_id,
                     $payment_number,
                     $due_date->format('Y-m-d'),
-                    $monthly_payment
+                    $installment_amount
                 ]);
             }
 
@@ -163,10 +158,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($db->inTransaction()) {
                 $db->rollBack();
             }
-            foreach ($uploaded_file_paths ?? [] as $uploaded_file_path) {
-                if (is_file($uploaded_file_path)) {
-                    unlink($uploaded_file_path);
-                }
+            foreach ($stored_documents ?? [] as $stored_document) {
+                deleteLoanDocument($stored_document);
             }
             $created_loan_id = null;
             $error = 'Could not create the loan. Please check the loan details and try again.';

@@ -16,6 +16,9 @@ $stmt = $db->prepare("SELECT p.id,
                       INNER JOIN loan_applications la ON la.id = p.loan_id
                       LEFT JOIN payment_schedule ps ON ps.id = p.schedule_id
                       WHERE la.user_id = ?
+                        AND (p.schedule_id IS NULL OR p.id = (
+                            SELECT MAX(p_latest.id) FROM payments p_latest WHERE p_latest.schedule_id = p.schedule_id
+                        ))
                       ORDER BY COALESCE(ps.paid_date, p.payment_date) DESC, p.id DESC");
 $stmt->execute([$_SESSION['user_id']]);
 $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);

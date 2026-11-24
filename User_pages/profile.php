@@ -9,13 +9,17 @@ if (!isLoggedIn()) {
 $db = Database::getInstance()->getConnection();
 $success = '';
 $error = '';
+$csrf_scope = 'user_profile';
+$csrf_token = csrfToken($csrf_scope);
 
 // Handle profile update
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    $full_name = sanitize($_POST['full_name']);
-    $email = sanitize($_POST['email']);
-
-    try {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null, $csrf_scope)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } else {
+        $full_name = sanitize($_POST['full_name'] ?? '');
+        $email = sanitize($_POST['email'] ?? '');
+        try {
         // Check if email is already used by another user
         $stmt = $db->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
         $stmt->execute([$email, $_SESSION['user_id']]);
@@ -29,8 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['full_name'] = $full_name;
             $success = 'Profile updated successfully!';
         }
-    } catch (Exception $e) {
-        $error = 'Error updating profile: ' . $e->getMessage();
+        } catch (Exception $e) {
+            error_log('Customer profile update failed: ' . $e->getMessage());
+            $error = 'The profile could not be updated. Please try again.';
+        }
     }
 }
 
@@ -87,6 +93,7 @@ ob_start();
                 <?php endif; ?>
 
                 <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="profileFullName">Full name</label>
                         <input type="text" class="form-control" id="profileFullName" name="full_name" value="<?php echo htmlspecialchars($user['full_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>

@@ -65,6 +65,9 @@ if ($loan_id > 0) {
 
 $where = [];
 $parameters = [];
+$where[] = '(p.schedule_id IS NULL OR p.id = (
+    SELECT MAX(p_latest.id) FROM payments p_latest WHERE p_latest.schedule_id = p.schedule_id
+))';
 if ($loan_id > 0) {
     $where[] = 'p.loan_id = ?';
     $parameters[] = $loan_id;

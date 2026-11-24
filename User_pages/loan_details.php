@@ -1,5 +1,6 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once '../Loan-system/loan_document_storage.php';
 require_once 'user_layout.php';
 
 if (!isLoggedIn()) {
@@ -121,14 +122,14 @@ ob_start();
                         <?php if ($loan['id_front_path']): ?>
                         <div class="col-md-6">
                             <p class="fw-semibold mb-2">ID Front</p>
-                            <img src="<?php echo $loan['id_front_path']; ?>" class="img-fluid rounded shadow-sm" alt="ID Front">
+                            <img src="../Loan-system/loan_document.php?id=<?php echo (int) $loan['id']; ?>&amp;side=front" class="img-fluid rounded shadow-sm" alt="ID Front">
                         </div>
                         <?php endif; ?>
                         
                         <?php if ($loan['id_back_path']): ?>
                         <div class="col-md-6">
                             <p class="fw-semibold mb-2">ID Back</p>
-                            <img src="<?php echo $loan['id_back_path']; ?>" class="img-fluid rounded shadow-sm" alt="ID Back">
+                            <img src="../Loan-system/loan_document.php?id=<?php echo (int) $loan['id']; ?>&amp;side=back" class="img-fluid rounded shadow-sm" alt="ID Back">
                         </div>
                         <?php endif; ?>
                     </div>

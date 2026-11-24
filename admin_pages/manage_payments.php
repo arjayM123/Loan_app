@@ -1,5 +1,6 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once '../Loan-system/payment_ledger.php';
 require_once 'admin_layout.php';
 
 if (!isLoggedIn() || !isAdmin()) {
@@ -18,45 +19,54 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['bulk_payment_action'])
     $bulk_action = sanitize($_POST['bulk_payment_action']);
     $bulk_loan_id = intval($_POST['loan_id'] ?? 0);
 
-    try {
-        if ($bulk_action === 'mark_paid') {
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrf_token) || !hash_equals($_SESSION['manage_payments_csrf'], $csrf_token)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } elseif ($bulk_loan_id < 1 || !in_array($bulk_action, ['mark_paid', 'reset_pending'], true)) {
+        $error = 'Choose a valid loan payment action.';
+    } else {
+        try {
             $db->beginTransaction();
-            $stmt = $db->prepare("SELECT id, amount FROM payment_schedule WHERE loan_id = ? AND status <> 'paid'");
-            $stmt->execute([$bulk_loan_id]);
-            $newly_paid_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if ($bulk_action === 'mark_paid') {
+                $stmt = $db->prepare("SELECT id, amount FROM payment_schedule WHERE loan_id = ? AND status <> 'paid' FOR UPDATE");
+                $stmt->execute([$bulk_loan_id]);
+                $newly_paid_rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $stmt = $db->prepare("UPDATE payment_schedule SET status = 'paid', paid_date = NOW() WHERE loan_id = ? AND status <> 'paid'");
+                $stmt = $db->prepare("UPDATE payment_schedule SET status = 'paid', paid_date = NOW() WHERE loan_id = ? AND status <> 'paid'");
+                $stmt->execute([$bulk_loan_id]);
+                foreach ($newly_paid_rows as $newly_paid_row) {
+                    recordSchedulePayment($db, $bulk_loan_id, $newly_paid_row['id'], $newly_paid_row['amount']);
+                }
+                $success = 'All remaining payments were marked as paid.';
+            } else {
+                $stmt = $db->prepare("UPDATE payment_schedule SET status = 'pending', paid_date = NULL WHERE loan_id = ?");
+                $stmt->execute([$bulk_loan_id]);
+                $stmt = $db->prepare("UPDATE loan_applications SET status = 'approved' WHERE id = ? AND status = 'completed'");
+                $stmt->execute([$bulk_loan_id]);
+                $success = 'All payments were reset to pending. Existing ledger rows will be refreshed if marked paid again.';
+            }
+
+            $stmt = $db->prepare("SELECT COUNT(*) AS total_payments,
+                                         SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_payments
+                                  FROM payment_schedule WHERE loan_id = ?");
             $stmt->execute([$bulk_loan_id]);
-            $payment_stmt = $db->prepare("INSERT INTO payments (loan_id, schedule_id, amount, payment_method) VALUES (?, ?, ?, 'Manual')");
-            foreach ($newly_paid_rows as $newly_paid_row) {
-                $payment_stmt->execute([$bulk_loan_id, $newly_paid_row['id'], $newly_paid_row['amount']]);
+            $payment_totals = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ((int) $payment_totals['total_payments'] > 0
+                && (int) $payment_totals['total_payments'] === (int) $payment_totals['paid_payments']) {
+                $stmt = $db->prepare("UPDATE loan_applications SET status = 'completed' WHERE id = ?");
+                $stmt->execute([$bulk_loan_id]);
+                if ($bulk_action === 'mark_paid') {
+                    $success = 'All payments were marked as paid and the loan is completed.';
+                }
             }
             $db->commit();
-            $success = 'All remaining payments were marked as paid.';
-        } elseif ($bulk_action === 'reset_pending') {
-            $stmt = $db->prepare("UPDATE payment_schedule SET status = 'pending', paid_date = NULL WHERE loan_id = ?");
-            $stmt->execute([$bulk_loan_id]);
-            $stmt = $db->prepare("UPDATE loan_applications SET status = 'approved' WHERE id = ? AND status = 'completed'");
-            $stmt->execute([$bulk_loan_id]);
-            $success = 'All payments were reset to pending.';
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('Bulk payment update failed: ' . $e->getMessage());
+            $error = 'The payment schedule could not be updated. Please try again.';
         }
-
-        $stmt = $db->prepare("SELECT COUNT(*) AS total_payments,
-                                     SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_payments
-                              FROM payment_schedule WHERE loan_id = ?");
-        $stmt->execute([$bulk_loan_id]);
-        $payment_totals = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ((int) $payment_totals['total_payments'] > 0
-            && (int) $payment_totals['total_payments'] === (int) $payment_totals['paid_payments']) {
-            $stmt = $db->prepare("UPDATE loan_applications SET status = 'completed' WHERE id = ?");
-            $stmt->execute([$bulk_loan_id]);
-            $success = 'All payments were marked as paid and the loan is completed.';
-        }
-    } catch (Throwable $e) {
-        if ($db->inTransaction()) {
-            $db->rollBack();
-        }
-        $error = 'Error updating all payments: ' . $e->getMessage();
     }
 }
 
@@ -135,58 +145,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reschedule_payments']
 
 // Handle payment status update
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_payment'])) {
-    $schedule_id = intval($_POST['schedule_id']);
-    $new_status = sanitize($_POST['payment_status']);
-    
-    try {
-        if ($new_status === 'paid') {
-            // Mark as paid with current timestamp
-            $stmt = $db->prepare("UPDATE payment_schedule SET status = 'paid', paid_date = NOW() WHERE id = ?");
-        } else {
-            // Mark as pending or overdue, clear paid date
-            $stmt = $db->prepare("UPDATE payment_schedule SET status = ?, paid_date = NULL WHERE id = ?");
-            $stmt->execute([$new_status, $schedule_id]);
-            $success = "Payment status updated successfully!";
-        }
-        
-        if ($new_status === 'paid') {
-            if ($stmt->execute([$schedule_id])) {
-                // Record payment in payments table
-                $stmt = $db->prepare("SELECT loan_id, amount FROM payment_schedule WHERE id = ?");
-                $stmt->execute([$schedule_id]);
-                $payment_info = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                $stmt = $db->prepare("INSERT INTO payments (loan_id, schedule_id, amount, payment_method) VALUES (?, ?, ?, 'Manual')");
-                $stmt->execute([$payment_info['loan_id'], $schedule_id, $payment_info['amount']]);
-
-                $stmt = $db->prepare("SELECT COUNT(*) AS total_payments,
-                                             SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_payments
-                                      FROM payment_schedule WHERE loan_id = ?");
-                $stmt->execute([$payment_info['loan_id']]);
-                $payment_totals = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if ((int) $payment_totals['total_payments'] > 0
-                    && (int) $payment_totals['total_payments'] === (int) $payment_totals['paid_payments']) {
-                    $stmt = $db->prepare("UPDATE loan_applications SET status = 'completed' WHERE id = ?");
-                    $stmt->execute([$payment_info['loan_id']]);
-                    $success = "Payment marked as paid and loan completed successfully!";
-                }
-                
-                if ($success === '') {
-                    $success = "Payment marked as paid successfully!";
-                }
-            }
-        } else {
-            $stmt = $db->prepare("SELECT loan_id FROM payment_schedule WHERE id = ?");
-            $stmt->execute([$schedule_id]);
+    $schedule_id = filter_var($_POST['schedule_id'] ?? null, FILTER_VALIDATE_INT);
+    $new_status = $_POST['payment_status'] ?? '';
+    $posted_loan_id = filter_var($_POST['loan_id'] ?? null, FILTER_VALIDATE_INT);
+    $csrf_token = $_POST['csrf_token'] ?? '';
+    if (!is_string($csrf_token) || !hash_equals($_SESSION['manage_payments_csrf'], $csrf_token)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } elseif ($schedule_id === false || $schedule_id < 1
+        || $posted_loan_id === false || $posted_loan_id !== $loan_id
+        || !in_array($new_status, ['paid', 'pending'], true)) {
+        $error = 'Choose a valid installment status.';
+    } else {
+        try {
+            $db->beginTransaction();
+            $stmt = $db->prepare('SELECT loan_id, amount, status FROM payment_schedule WHERE id = ? AND loan_id = ? FOR UPDATE');
+            $stmt->execute([$schedule_id, $loan_id]);
             $payment_info = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($payment_info) {
+            if (!$payment_info) {
+                throw new RuntimeException('Installment not found.');
+            }
+
+            if ($new_status === 'paid') {
+                if ($payment_info['status'] !== 'paid') {
+                    $stmt = $db->prepare("UPDATE payment_schedule SET status = 'paid', paid_date = NOW() WHERE id = ?");
+                    $stmt->execute([$schedule_id]);
+                    recordSchedulePayment($db, $payment_info['loan_id'], $schedule_id, $payment_info['amount']);
+                }
+                $success = 'Payment marked as paid successfully.';
+            } else {
+                $stmt = $db->prepare("UPDATE payment_schedule SET status = 'pending', paid_date = NULL WHERE id = ?");
+                $stmt->execute([$schedule_id]);
                 $stmt = $db->prepare("UPDATE loan_applications SET status = 'approved' WHERE id = ? AND status = 'completed'");
                 $stmt->execute([$payment_info['loan_id']]);
+                $success = 'Payment reset to pending.';
             }
+
+            $stmt = $db->prepare("SELECT COUNT(*) AS total_payments,
+                                         SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_payments
+                                  FROM payment_schedule WHERE loan_id = ?");
+            $stmt->execute([$payment_info['loan_id']]);
+            $payment_totals = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ((int) $payment_totals['total_payments'] > 0
+                && (int) $payment_totals['total_payments'] === (int) $payment_totals['paid_payments']) {
+                $stmt = $db->prepare("UPDATE loan_applications SET status = 'completed' WHERE id = ?");
+                $stmt->execute([$payment_info['loan_id']]);
+                if ($new_status === 'paid') {
+                    $success = 'Payment marked paid and the loan is completed.';
+                }
+            }
+            $db->commit();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            error_log('Payment status update failed: ' . $e->getMessage());
+            $error = 'The payment status could not be updated. Please try again.';
         }
-    } catch (Exception $e) {
-        $error = "Error updating payment: " . $e->getMessage();
     }
 }
 
@@ -457,12 +471,14 @@ if ($loan_id > 0) {
         </button>
         <form method="POST" class="payment-bulk-action" data-confirm="Mark every installment as paid?">
             <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['manage_payments_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
             <button type="submit" name="bulk_payment_action" value="mark_paid" class="btn btn-success" aria-label="Mark all payments paid" title="Mark all payments paid">
                 <i class="bi bi-check-all"></i>
             </button>
         </form>
         <form method="POST" class="payment-bulk-action" data-confirm="Reset every installment to pending? Existing payment history will remain recorded.">
             <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['manage_payments_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
             <button type="submit" name="bulk_payment_action" value="reset_pending" class="btn btn-outline-warning" aria-label="Reset all payments to pending" title="Reset all payments to pending">
                 <i class="bi bi-arrow-counterclockwise"></i>
             </button>
@@ -471,9 +487,11 @@ if ($loan_id > 0) {
 
     <!-- Hidden form for status updates -->
     <form id="paymentForm" method="POST" class="visually-hidden">
+        <input type="hidden" name="loan_id" value="<?php echo (int) $loan_id; ?>">
         <input type="hidden" name="schedule_id" id="scheduleId">
         <input type="hidden" name="payment_status" id="paymentStatus">
         <input type="hidden" name="update_payment" value="1">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['manage_payments_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
     </form>
 
     <div class="modal fade" id="paymentConfirmModal" tabindex="-1" aria-labelledby="paymentConfirmTitle" aria-hidden="true">

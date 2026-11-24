@@ -1,0 +1,4 @@
+Options -Indexes
+<Files "private_config.php">
+    Require all denied
+</Files>

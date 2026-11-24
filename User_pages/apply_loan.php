@@ -1,5 +1,6 @@
 <?php
 require_once '../Loan-system/config.php';
+require_once '../Loan-system/loan_document_storage.php';
 require_once 'user_layout.php';
 
 if (!isLoggedIn()) {
@@ -13,59 +14,63 @@ $stmt = $db->prepare("SELECT full_name, phone FROM users WHERE id = ?");
 $stmt->execute([$_SESSION['user_id']]);
 $current_user = $stmt->fetch(PDO::FETCH_ASSOC);
 $user_phone = preg_replace('/^\+63/', '', $current_user['phone'] ?? '');
+$csrf_scope = 'user_apply_loan';
+$csrf_token = csrfToken($csrf_scope);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $applicant_name = $current_user['full_name'] ?? '';
     $phone_input = $user_phone;
     $phone = normalizePhoneNumber($phone_input, 'PH');
+    $address_input = $_POST['address'] ?? '';
+    $address = is_string($address_input) ? sanitize($address_input) : '';
+    $currency_input = $_POST['currency'] ?? '';
+    $currency = is_string($currency_input) ? strtoupper(trim($currency_input)) : '';
+    $loan_amount_input = $_POST['loanAmount'] ?? null;
+    $loan_term_input = $_POST['monthlyTerm'] ?? null;
+    $payment_day_input = $_POST['dueDate'] ?? null;
 
-    if (empty($applicant_name)) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null, $csrf_scope)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } elseif (empty($applicant_name)) {
         $error = 'Full name is required.';
     } else if (empty($phone_input)) {
         $error = 'Phone number is required.';
     } else if (!$phone) {
         $error = 'Please enter a valid Philippine mobile number with at least 9 digits.';
+    } elseif (!in_array($currency, ['PHP', 'SGD'], true)) {
+        $error = 'Choose a supported currency.';
+    } elseif (!is_scalar($loan_amount_input) || !is_numeric((string) $loan_amount_input)
+        || !is_finite((float) $loan_amount_input) || (float) $loan_amount_input <= 0) {
+        $error = 'Loan amount must be a valid amount greater than zero.';
+    } elseif (filter_var($loan_term_input, FILTER_VALIDATE_INT) === false
+        || (int) $loan_term_input < 1 || (int) $loan_term_input > 12) {
+        $error = 'Choose a loan term from 1 to 12 months.';
+    } elseif (filter_var($payment_day_input, FILTER_VALIDATE_INT) === false
+        || (int) $payment_day_input < 1 || (int) $payment_day_input > 31) {
+        $error = 'Choose a payment day from 1 to 31.';
     }
 
     if ($error === '') {
+        $loan_amount = round((float) $loan_amount_input, 2);
+        $loan_term = (int) $loan_term_input;
+        $payment_day = (int) $payment_day_input;
+        $interest_rate = 10.0;
+        $monthly_interest = round($loan_amount * ($interest_rate / 100), 2);
+        $total_interest = round($monthly_interest * $loan_term, 2);
+        $total_amount = round($loan_amount + $total_interest, 2);
+        $monthly_payment = round($total_amount / $loan_term, 2);
+        $stored_documents = [];
+
         try {
             $db->beginTransaction();
 
-            // Sanitize inputs
-            $address = sanitize($_POST['address'] ?? '');
-            $currency = strtoupper($_POST['currency'] ?? 'PHP');
-            if (!in_array($currency, ['PHP', 'SGD'], true)) {
-                $currency = 'PHP';
+            $id_front_path = storeLoanDocument($_FILES['idFront'] ?? null);
+            if ($id_front_path !== null) {
+                $stored_documents[] = $id_front_path;
             }
-            $loan_amount = floatval($_POST['loanAmount'] ?? 0);
-            // The monthly interest rate is fixed by the system and is not customer-editable.
-            $interest_rate = 10.0;
-            $loan_term = intval($_POST['monthlyTerm'] ?? 0);
-            $payment_day = intval($_POST['dueDate'] ?? 1);
-
-            // Calculate loan details
-            $monthly_interest = $loan_amount * ($interest_rate / 100);
-            $total_interest = $monthly_interest * $loan_term;
-            $total_amount = $loan_amount + $total_interest;
-            $monthly_payment = $total_amount / $loan_term;
-
-            // Handle file uploads
-            $id_front_path = null;
-            $id_back_path = null;
-
-            if (isset($_FILES['idFront']) && $_FILES['idFront']['error'] == 0) {
-                $upload_dir = 'uploads/';
-                if (!file_exists($upload_dir)) {
-                    mkdir($upload_dir, 0777, true);
-                }
-                $id_front_path = $upload_dir . uniqid() . '_' . basename($_FILES['idFront']['name']);
-                move_uploaded_file($_FILES['idFront']['tmp_name'], $id_front_path);
-            }
-
-            if (isset($_FILES['idBack']) && $_FILES['idBack']['error'] == 0) {
-                $upload_dir = 'uploads/';
-                $id_back_path = $upload_dir . uniqid() . '_' . basename($_FILES['idBack']['name']);
-                move_uploaded_file($_FILES['idBack']['tmp_name'], $id_back_path);
+            $id_back_path = storeLoanDocument($_FILES['idBack'] ?? null);
+            if ($id_back_path !== null) {
+                $stored_documents[] = $id_back_path;
             }
 
             // Insert loan application
@@ -93,22 +98,35 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             $loan_id = $db->lastInsertId();
 
-            // Generate payment schedule
-            $today = new DateTime();
+            // Anchor to the first day so month-end applications cannot skip or duplicate a month.
+            $schedule_base = new DateTimeImmutable('first day of this month');
+            $schedule_stmt = $db->prepare("INSERT INTO payment_schedule (loan_id, payment_number, due_date, amount) VALUES (?, ?, ?, ?)");
+            $scheduled_amount = 0.0;
             for ($i = 1; $i <= $loan_term; $i++) {
-                $due_date = clone $today;
-                $due_date->modify("+$i month");
-                $due_date->setDate($due_date->format('Y'), $due_date->format('m'), min($payment_day, $due_date->format('t')));
-
-                $stmt = $db->prepare("INSERT INTO payment_schedule (loan_id, payment_number, due_date, amount) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$loan_id, $i, $due_date->format('Y-m-d'), $monthly_payment]);
+                $due_month = $schedule_base->modify('+' . $i . ' months');
+                $due_date = $due_month->setDate(
+                    (int) $due_month->format('Y'),
+                    (int) $due_month->format('m'),
+                    min($payment_day, (int) $due_month->format('t'))
+                );
+                $installment_amount = $i === $loan_term
+                    ? round($total_amount - $scheduled_amount, 2)
+                    : $monthly_payment;
+                $schedule_stmt->execute([$loan_id, $i, $due_date->format('Y-m-d'), $installment_amount]);
+                $scheduled_amount += $installment_amount;
             }
 
             $db->commit();
             $success = 'Loan application submitted successfully! Application ID: ' . $loan_id;
-        } catch (Exception $e) {
-            $db->rollBack();
-            $error = 'Error submitting application: ' . $e->getMessage();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            foreach ($stored_documents as $stored_document) {
+                deleteLoanDocument($stored_document);
+            }
+            error_log('Customer loan application failed: ' . $e->getMessage());
+            $error = 'The loan application could not be submitted. Please check the details and try again.';
         }
     }
 }
@@ -161,6 +179,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <?php endif; ?>
                         
                         <form id="loanForm" class="loan-application-form" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                             <!-- Personal Information -->
                             <h4 class="border-bottom border-warning pb-2 mb-4"><i class="bi bi-person-circle me-2 text-warning"></i>Personal Information</h4>
                             

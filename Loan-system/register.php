@@ -3,6 +3,8 @@ require_once 'config.php';
 
 $error = '';
 $success = '';
+$csrf_scope = 'registration';
+$csrf_token = csrfToken($csrf_scope);
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $phone = sanitize($_POST['phone'] ?? '');
@@ -12,7 +14,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $confirm_password = $_POST['confirm_password'] ?? '';
     $normalized_phone = normalizePhoneNumber($phone, 'PH');
     
-    if (!preg_match('/^[^\s@]+@gmail\.com$/i', $email)) {
+    if (!verifyCsrfToken($_POST['csrf_token'] ?? null, $csrf_scope)) {
+        $error = 'This form expired. Reload the page and try again.';
+    } else if (!preg_match('/^[^\s@]+@gmail\.com$/i', $email)) {
         $error = 'Please enter a valid Gmail address ending with @gmail.com.';
     } else if (empty($phone)) {
         $error = 'Phone number is required';
@@ -20,8 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = 'Please enter a valid Philippine mobile number with at least 9 digits.';
     } else if ($password !== $confirm_password) {
         $error = 'Passwords do not match';
-    } else if (strlen($password) < 6) {
-        $error = 'Password must be at least 6 characters';
+    } else if (strlen($password) < 12) {
+        $error = 'Password must be at least 12 characters';
     } else {
         $db = Database::getInstance()->getConnection();
         $phone_variants = phoneVariants($normalized_phone);
@@ -86,6 +90,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <?php endif; ?>
                         
                         <form method="POST" action="">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token, ENT_QUOTES, 'UTF-8'); ?>">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-semibold" for="registerFullName">Full Name</label>
@@ -111,8 +116,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-semibold" for="registerPassword">Password</label>
-                                    <input type="password" class="form-control" id="registerPassword" name="password" autocomplete="new-password" required minlength="6">
-                                    <small class="text-muted">Minimum 6 characters</small>
+                                    <input type="password" class="form-control" id="registerPassword" name="password" autocomplete="new-password" required minlength="12">
+                                    <small class="text-muted">Minimum 12 characters</small>
                                 </div>
                                 
                                 <div class="col-md-6 mb-4">

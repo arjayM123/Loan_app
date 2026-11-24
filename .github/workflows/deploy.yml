@@ -14,15 +14,68 @@ jobs:
       - name: 🚀 Checkout repository
         uses: actions/checkout@v4
 
+      - name: Set up PHP for syntax checks
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Check PHP syntax
+        run: find . -type f -name '*.php' -not -path './.git/*' -print0 | xargs -0 -r -n1 php -l
+
+      - name: Write private database config from GitHub secrets
+        env:
+          LOAN_DB_HOST: ${{ secrets.LOAN_DB_HOST }}
+          LOAN_DB_NAME: ${{ secrets.LOAN_DB_NAME }}
+          LOAN_DB_USER: ${{ secrets.LOAN_DB_USER }}
+          LOAN_DB_PASS: ${{ secrets.LOAN_DB_PASS }}
+          LOAN_PRIVATE_UPLOAD_DIR: ${{ secrets.LOAN_PRIVATE_UPLOAD_DIR }}
+        run: |
+          php <<'PHP'
+          <?php
+          $keys = ['LOAN_DB_HOST', 'LOAN_DB_NAME', 'LOAN_DB_USER', 'LOAN_DB_PASS'];
+          $missing = [];
+          foreach ($keys as $key) {
+              $value = getenv($key);
+              if ($value === false || $value === '') {
+                  $missing[] = $key;
+              }
+          }
+          if ($missing) {
+              fwrite(STDERR, 'Missing GitHub Actions secrets: ' . implode(', ', $missing) . PHP_EOL);
+              exit(1);
+          }
+          $config = [
+              'host' => getenv('LOAN_DB_HOST'),
+              'database' => getenv('LOAN_DB_NAME'),
+              'user' => getenv('LOAN_DB_USER'),
+              'password' => getenv('LOAN_DB_PASS'),
+              'upload_dir' => getenv('LOAN_PRIVATE_UPLOAD_DIR') ?: ''
+          ];
+          if (file_put_contents('Loan-system/private_config.php', "<?php\nreturn " . var_export($config, true) . ";\n", LOCK_EX) === false) {
+              fwrite(STDERR, "Could not write private database configuration.\n");
+              exit(1);
+          }
+          chmod('Loan-system/private_config.php', 0600);
+          PHP
+
       - name: 📤 Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          security: strict
           server-dir: ${{ secrets.FTP_DIR }}
           local-dir: ./
           exclude: |
             **/.git*
             **/.github/**
+            **/.gitignore
+            setup_admin.php
+            Loan-system/private_config.example.php
+            User_pages/uploads/*.jpg
+            User_pages/uploads/*.jpeg
+            User_pages/uploads/*.png
+            User_pages/uploads/*.webp
             README.md
