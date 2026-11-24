@@ -14,28 +14,7 @@ if (!$isLocalEnvironment) {
     ini_set('log_errors', '1');
 }
 
-$privateConfigPath = getenv('LOAN_PRIVATE_CONFIG_FILE') ?: __DIR__ . '/private_config.php';
-$privateDatabaseConfig = [];
-if (is_file($privateConfigPath)) {
-    $loadedPrivateConfig = require $privateConfigPath;
-    if (is_array($loadedPrivateConfig)) {
-        $privateDatabaseConfig = $loadedPrivateConfig;
-    }
-}
-
-$readDatabaseSetting = static function ($environmentName, $privateKey) use ($privateDatabaseConfig) {
-    $value = getenv($environmentName);
-    if ($value === false || $value === '') {
-        $value = $_SERVER[$environmentName] ?? $_ENV[$environmentName] ?? null;
-    }
-    if (is_string($value) && trim($value) !== '') {
-        return trim($value);
-    }
-    $value = $privateDatabaseConfig[$privateKey] ?? null;
-    return is_string($value) ? trim($value) : '';
-};
-
-define('LOAN_PRIVATE_UPLOAD_DIR', $readDatabaseSetting('LOAN_PRIVATE_UPLOAD_DIR', 'upload_dir'));
+define('LOAN_PRIVATE_UPLOAD_DIR', '');
 
 if ($isLocalEnvironment) {
     define('DB_HOST', 'localhost');
@@ -43,10 +22,10 @@ if ($isLocalEnvironment) {
     define('DB_PASS', '');
     define('DB_NAME', 'loan_system');
 } else {
-    define('DB_HOST', $readDatabaseSetting('LOAN_DB_HOST', 'host'));
-    define('DB_USER', $readDatabaseSetting('LOAN_DB_USER', 'user'));
-    define('DB_PASS', $readDatabaseSetting('LOAN_DB_PASS', 'password'));
-    define('DB_NAME', $readDatabaseSetting('LOAN_DB_NAME', 'database'));
+    define('DB_HOST', 'sql100.infinityfree.com');
+    define('DB_USER', 'if0_41024119');
+    define('DB_PASS', 'HIRAM2026');
+    define('DB_NAME', 'if0_41024119_loan_system');
 
     if (DB_HOST === '' || DB_USER === '' || DB_PASS === '' || DB_NAME === '') {
         error_log('Loan app database configuration is missing.');

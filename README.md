@@ -8,13 +8,11 @@ This is a PHP and MySQL loan management app. It is **not production-ready until 
 2. Use the existing `loan_system` database, or import a schema and data export from the database you already use. No schema export is included here.
 3. Open `http://localhost/Loan_app/` and sign in.
 
-Localhost uses the standard XAMPP database defaults in `Loan-system/config.php`. Production credentials are not stored in that file.
+Localhost uses the standard XAMPP database defaults in `Loan-system/config.php`. Production database settings are also configured in `Loan-system/config.php` for the current InfinityFree deployment.
 
 ## Database configuration
 
-For production, configure `LOAN_DB_HOST`, `LOAN_DB_NAME`, `LOAN_DB_USER`, and `LOAN_DB_PASS` in the hosting environment. If the host cannot set environment variables, copy `Loan-system/private_config.example.php` to `Loan-system/private_config.php` and enter the database details there. Never commit that private file. It is Git-ignored and Apache is configured to deny direct web requests to it. Storing the file outside the web root is safer; set `LOAN_PRIVATE_CONFIG_FILE` to its absolute path when the host supports environment variables.
-
-The database password that was previously in the repository must be changed in the database hosting panel. Then update the private configuration with the new password. Removing it from the current source does not erase older Git history.
+The production branch of `Loan-system/config.php` contains the InfinityFree database host, name, username, and password. Get these values from the hosting control panel; the database host is not `localhost`. This puts credentials in a Git-tracked source file, so keep the repository private and restrict repository access. A database password that has appeared in Git history should be changed in the hosting panel, then updated in `config.php`; removing it from the latest version does not erase old commits.
 
 ## Private ID document storage
 
@@ -40,13 +38,11 @@ On shared hosting without command-line access, promote the intended account thro
 
 Before deploying:
 
-- Rotate the database password and configure the new private credentials.
+- Rotate any database password exposed in Git history and update the production settings in `Loan-system/config.php`.
 - Export and back up the existing database. Confirm its tables, indexes, foreign keys, and decimal money columns; this repository has no schema/migration to create or verify them.
-- Add these GitHub Actions repository secrets: `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`, `FTP_DIR`, `LOAN_DB_HOST`, `LOAN_DB_NAME`, `LOAN_DB_USER`, and `LOAN_DB_PASS`. The workflow creates the ignored private database config from the four database secrets during deployment.
-- If the default private upload folder is not writable, also add `LOAN_PRIVATE_UPLOAD_DIR` with an absolute path outside the web root.
-- The workflow uses explicit FTPS with certificate verification; deploy only if the host supports it.
+- Configure the existing GitHub Actions secrets `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`, and `FTP_DIR` for deployment. The current workflow uploads the tracked `config.php`; it does not create a separate database config file.
 - Confirm PHP 8.2 or later, PDO MySQL, and Fileinfo are available on the host.
 - Confirm the host serves the site over HTTPS and that the private upload directory is writable but outside the web root.
 - Test a full customer application, administrator approval, payment marking/reset, customer history access, and backup restoration on a staging copy before using real loan records.
 
-The deployment workflow runs PHP syntax checks, but it does not replace database or end-to-end testing.
+The current deployment workflow uses FTP and does not run PHP syntax checks or database/end-to-end tests.
