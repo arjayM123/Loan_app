@@ -1,0 +1,181 @@
+﻿:root {
+    --bs-primary: #273c5a;
+    --bs-primary-rgb: 39, 60, 90;
+    --bs-link-color: #273c5a;
+    --bs-link-hover-color: #172033;
+}
+
+.btn-primary {
+    --bs-btn-color: #fff;
+    --bs-btn-bg: #273c5a;
+    --bs-btn-border-color: #273c5a;
+    --bs-btn-hover-color: #172033;
+    --bs-btn-hover-bg: #f6c343;
+    --bs-btn-hover-border-color: #f6c343;
+    --bs-btn-focus-shadow-rgb: 39, 60, 90;
+    --bs-btn-active-color: #172033;
+    --bs-btn-active-bg: #f6c343;
+    --bs-btn-active-border-color: #f6c343;
+    --bs-btn-disabled-color: #fff;
+    --bs-btn-disabled-bg: #65758b;
+    --bs-btn-disabled-border-color: #65758b;
+}
+
+.btn-outline-primary {
+    --bs-btn-color: #273c5a;
+    --bs-btn-border-color: #273c5a;
+    --bs-btn-hover-color: #172033;
+    --bs-btn-hover-bg: #f6c343;
+    --bs-btn-hover-border-color: #f6c343;
+    --bs-btn-focus-shadow-rgb: 39, 60, 90;
+    --bs-btn-active-color: #172033;
+    --bs-btn-active-bg: #f6c343;
+    --bs-btn-active-border-color: #f6c343;
+    --bs-btn-disabled-color: #65758b;
+    --bs-btn-disabled-border-color: #aeb8c5;
+}
+
+.btn-link {
+    --bs-btn-color: #273c5a;
+    --bs-btn-hover-color: #172033;
+}
+
+html {
+    min-width: 320px;
+    scroll-behavior: smooth;
+}
+
+body {
+    min-width: 320px;
+    overflow-x: hidden;
+}
+
+img,
+video,
+iframe,
+svg {
+    max-width: 100%;
+}
+
+img,
+video {
+    height: auto;
+}
+
+.container,
+.container-fluid,
+.row > *,
+.card,
+.card-body,
+.card-header,
+.card-footer {
+    min-width: 0;
+}
+
+.card,
+.card-body,
+.card-header,
+.card-footer,
+th,
+td,
+p,
+label,
+.form-text {
+    overflow-wrap: anywhere;
+}
+
+h1,
+.h1 {
+    font-size: clamp(1.55rem, 4vw, 2.5rem);
+}
+
+h2,
+.h2 {
+    font-size: clamp(1.35rem, 3.4vw, 2rem);
+}
+
+h3,
+.h3 {
+    font-size: clamp(1.2rem, 2.8vw, 1.75rem);
+}
+
+.btn {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.btn:not(.btn-sm) {
+    min-height: 2.65rem;
+}
+
+.btn-sm {
+    min-height: 2.15rem;
+}
+
+.form-control,
+.form-select,
+textarea,
+input,
+select {
+    max-width: 100%;
+    min-width: 0;
+}
+
+.input-group > .form-control,
+.input-group > .form-select {
+    flex: 1 1 0%;
+}
+
+.table-responsive {
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.table-responsive > .table {
+    margin-bottom: 0;
+}
+
+pre,
+code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 767.98px) {
+    .navbar .container,
+    .navbar .container-fluid {
+        padding-inline: .85rem;
+    }
+
+    .modal-dialog {
+        margin: .5rem;
+    }
+
+    .modal-content {
+        max-width: calc(100vw - 1rem);
+    }
+}
+
+@media (max-width: 575.98px) {
+    .container {
+        padding-right: .9rem;
+        padding-left: .9rem;
+    }
+
+    .btn-group {
+        flex-wrap: wrap;
+    }
+
+    .dropdown-menu {
+        max-width: calc(100vw - 1rem);
+        overflow-x: auto;
+    }
+
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}

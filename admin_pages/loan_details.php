@@ -7,6 +7,19 @@ if (!isLoggedIn()) {
 }
 
 $loan_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$return_page = $_GET['return'] ?? 'manage_loans';
+if (!is_string($return_page)) {
+    $return_page = 'manage_loans';
+}
+$return_status = $_GET['status'] ?? 'all';
+if (!is_string($return_status) || !in_array($return_status, ['all', 'pending', 'approved', 'rejected', 'completed'], true)) {
+    $return_status = 'all';
+}
+$back_to_dashboard = $return_page === 'admin_dashboard';
+$back_url = $back_to_dashboard
+    ? 'admin_dashboard.php'
+    : 'manage_loans.php?status=' . rawurlencode($return_status);
+$back_label = $back_to_dashboard ? 'Back to dashboard' : 'Back to loan management';
 
 $db = Database::getInstance()->getConnection();
 $success = '';
@@ -66,10 +79,34 @@ $status_class = [
 ?>
 <?php ob_start(); ?>
     <div class="container py-4 loan-details-page">
-    <div class="mb-3 loan-details-back">
-        <a href="manage_loans.php" class="btn btn-outline-primary">
-            <i class="bi bi-arrow-left me-2"></i>Back
+    <div class="loan-details-action-rail loan-details-back" aria-label="Loan details actions">
+        <a href="<?php echo htmlspecialchars($back_url, ENT_QUOTES, 'UTF-8'); ?>"
+           class="btn btn-outline-secondary loan-details-rail-button"
+           aria-label="<?php echo htmlspecialchars($back_label, ENT_QUOTES, 'UTF-8'); ?>"
+           title="<?php echo htmlspecialchars($back_label, ENT_QUOTES, 'UTF-8'); ?>">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            <span class="visually-hidden"><?php echo htmlspecialchars($back_label, ENT_QUOTES, 'UTF-8'); ?></span>
         </a>
+        <?php if (isAdmin() && $loan['status'] === 'approved'): ?>
+        <a href="manage_payments.php?loan_id=<?php echo (int) $loan_id; ?>"
+           class="btn btn-outline-secondary loan-details-rail-button loan-details-manage-payments-button"
+           aria-label="Manage payments"
+           title="Manage payments">
+            <i class="bi bi-cash-stack" aria-hidden="true"></i>
+            <span class="visually-hidden">Manage payments</span>
+        </a>
+        <?php endif; ?>
+        <?php if (isAdmin()): ?>
+        <button type="button"
+                class="btn btn-outline-secondary loan-details-rail-button loan-details-interest-button"
+                data-bs-toggle="modal"
+                data-bs-target="#modifyInterestModal"
+                aria-label="Modify interest rate"
+                title="Modify interest rate">
+            <i class="bi bi-percent" aria-hidden="true"></i>
+            <span class="visually-hidden">Modify interest rate</span>
+        </button>
+        <?php endif; ?>
     </div>
 
     <!-- Flex row for left and right -->
@@ -239,21 +276,6 @@ $status_class = [
             <!-- Admin Actions -->
             <?php if(isAdmin()): ?>
             <div class="flex-shrink-0">
-                <div class="card border-0 shadow-sm p-3 mb-3">
-                    <h6 class="mb-3">Modify Interest Rate</h6>
-                    <form method="POST">
-                        <div class="input-group mb-2">
-                            <input type="number" class="form-control" name="interest_rate" min="0" max="100" step="0.01" value="<?php echo htmlspecialchars($loan['interest_rate']); ?>" required>
-                            <span class="input-group-text">%</span>
-                        </div>
-                        <button type="submit" name="update_interest" class="btn btn-primary w-100"><i class="bi bi-percent me-2"></i>Update Interest</button>
-                    </form>
-                </div>
-                <?php if($loan['status']=='approved'): ?>
-                <a href="manage_payments.php?loan_id=<?php echo $loan_id; ?>" class="btn btn-primary w-100 mb-2">
-                    <i class="bi bi-cash-stack me-2"></i>Manage Payments
-                </a>
-                <?php endif; ?>
                 <?php if($loan['status']=='pending'): ?>
                 <form method="POST" action="manage_loans.php">
                     <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
@@ -272,6 +294,50 @@ $status_class = [
     </div>
 </div>
 
+<?php if (isAdmin()): ?>
+<div class="modal fade" id="modifyInterestModal" tabindex="-1" aria-labelledby="modifyInterestModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST">
+                <input type="hidden" name="update_interest" value="1">
+                <div class="modal-header bg-dark text-white border-bottom border-warning border-3">
+                    <h5 class="modal-title" id="modifyInterestModalTitle">
+                        <i class="bi bi-percent text-warning me-2" aria-hidden="true"></i>Modify Interest Rate
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <label class="form-label fw-semibold" for="desiredInterestRate">Desired monthly interest rate</label>
+                    <div class="input-group">
+                        <input type="number"
+                               class="form-control"
+                               id="desiredInterestRate"
+                               name="interest_rate"
+                               min="0"
+                               max="100"
+                               step="0.01"
+                               value="<?php echo htmlspecialchars((string) $loan['interest_rate'], ENT_QUOTES, 'UTF-8'); ?>"
+                               required>
+                        <span class="input-group-text">%</span>
+                    </div>
+                    <small class="text-muted d-block mt-2">The payment schedule will be recalculated using this rate.</small>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal" aria-label="Cancel" title="Cancel">
+                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                        <span class="visually-hidden">Cancel</span>
+                    </button>
+                    <button type="submit" class="btn btn-success" aria-label="Save interest rate" title="Save interest rate">
+                        <i class="bi bi-check-lg" aria-hidden="true"></i>
+                        <span class="visually-hidden">Save interest rate</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php
 $content = ob_get_clean();
-renderAdminPage('Loan Details - #' . $loan_id, $content, '../Loan-system/loan_details.css');
+renderAdminPage('Loan Details - #' . $loan_id, $content, '../Loan-system/loan_details.css?v=2');

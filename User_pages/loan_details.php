@@ -33,10 +33,23 @@ $currency_symbol = ($loan['currency'] ?? 'PHP') === 'SGD' ? '$' : '₱';
 ob_start();
 ?>
     <div class="container py-4 loan-details-page">
-        <div class="mb-3 loan-details-back">
-            <a href="user_dashboard.php" class="btn btn-outline-dark">
-                <i class="bi bi-arrow-left me-2"></i>Back
+        <div class="loan-details-action-rail loan-details-back" aria-label="Loan details actions">
+            <a href="user_dashboard.php"
+               class="btn btn-outline-secondary loan-details-rail-button"
+               aria-label="Back to dashboard"
+               title="Back to dashboard">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                <span class="visually-hidden">Back to dashboard</span>
             </a>
+            <?php if (isAdmin() && $loan['status'] === 'approved'): ?>
+            <a href="../admin_pages/manage_payments.php?loan_id=<?php echo (int) $loan_id; ?>"
+               class="btn btn-outline-secondary loan-details-rail-button loan-details-manage-payments-button"
+               aria-label="Manage payments"
+               title="Manage payments">
+                <i class="bi bi-cash-stack" aria-hidden="true"></i>
+                <span class="visually-hidden">Manage payments</span>
+            </a>
+            <?php endif; ?>
         </div>
         
         <div class="row">
@@ -216,12 +229,6 @@ ob_start();
                 <div class="card shadow-sm border-0 p-4">
                     <h6 class="mb-3">Admin Actions</h6>
                     
-                    <?php if ($loan['status'] == 'approved'): ?>
-                        <a href="manage_payments.php?loan_id=<?php echo $loan_id; ?>" class="btn btn-warning w-100 mb-2 fw-semibold">
-                            <i class="bi bi-cash-stack me-2"></i>Manage Payments
-                        </a>
-                    <?php endif; ?>
-                    
                     <?php if ($loan['status'] == 'pending'): ?>
                     <form method="POST" action="manage_loans.php">
                         <input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>">
@@ -244,4 +251,4 @@ ob_start();
     
 <?php
 $content = ob_get_clean();
-renderUserPage('Loan Details - #' . $loan_id, $content, '../Loan-system/loan_details.css');
+renderUserPage('Loan Details - #' . $loan_id, $content, '../Loan-system/loan_details.css?v=2');

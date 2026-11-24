@@ -58,18 +58,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Register - Loan System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="responsive.css">
+    <link rel="stylesheet" href="auth.css">
 </head>
-<body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-dark text-white text-center p-4">
-                        <i class="bi bi-person-plus fs-1 mb-3"></i>
-                        <h2>Create Account</h2>
-                        <p class="mb-0">Register for a new account</p>
+<body class="auth-page">
+    <main class="container auth-shell">
+        <div class="row justify-content-center auth-row">
+            <div class="col-12 col-md-10 col-lg-8 col-xl-7">
+                <div class="card auth-card">
+                    <div class="card-header auth-card-header text-center">
+                        <h1>HIRAM</h1>
+                        <p class="mb-0">Register to manage your loan applications</p>
                     </div>
-                    <div class="p-4">
+                    <div class="card-body auth-card-body">
                         <?php if ($error): ?>
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error; ?>
@@ -87,12 +88,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         <form method="POST" action="">
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Full Name</label>
-                                    <input type="text" class="form-control" name="full_name" required>
+                                    <label class="form-label fw-semibold" for="registerFullName">Full Name</label>
+                                    <input type="text" class="form-control" id="registerFullName" name="full_name" autocomplete="name" required>
                                 </div>
                                 
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Phone Number</label>
+                                    <label class="form-label fw-semibold" for="phone">Phone Number</label>
                                     <div class="input-group">
                                         <span class="input-group-text">+63</span>
                                         <input type="tel" class="form-control" id="phone" name="phone" required placeholder="9123456789" inputmode="numeric" maxlength="15">
@@ -109,18 +110,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-semibold">Password</label>
-                                    <input type="password" class="form-control" name="password" required minlength="6">
+                                    <label class="form-label fw-semibold" for="registerPassword">Password</label>
+                                    <input type="password" class="form-control" id="registerPassword" name="password" autocomplete="new-password" required minlength="6">
                                     <small class="text-muted">Minimum 6 characters</small>
                                 </div>
                                 
                                 <div class="col-md-6 mb-4">
-                                    <label class="form-label fw-semibold">Confirm Password</label>
-                                    <input type="password" class="form-control" name="confirm_password" required>
+                                    <label class="form-label fw-semibold" for="confirmPassword">Confirm Password</label>
+                                    <input type="password" class="form-control" id="confirmPassword" name="confirm_password" autocomplete="new-password" required>
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary w-100">
+                            <button type="submit" class="btn btn-primary w-100 auth-submit-button">
                                 <i class="bi bi-person-check me-2"></i>Create Account
                             </button>
                         </form>
@@ -134,7 +135,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
             </div>
         </div>
-    </div>
+    </main>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>

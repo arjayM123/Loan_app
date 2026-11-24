@@ -41,62 +41,78 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
 ob_start();
 ?>
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="card bg-dark text-white text-center border-bottom border-warning border-4 p-4 mb-4">
-                <div class="bg-white text-primary rounded-circle d-inline-flex align-items-center justify-content-center mx-auto mb-3 p-4 fs-1">
-                    <i class="bi bi-person"></i>
-                </div>
-                <h3><?php echo $user['full_name']; ?></h3>
-            </div>
+<main class="container py-4 user-profile-page">
+    <section class="user-profile-hero mb-4">
+        <span class="user-profile-kicker">YOUR ACCOUNT</span>
+        <h1>Profile settings</h1>
+        <p>Manage the contact details linked to your loan account.</p>
+    </section>
 
-            <div class="card shadow-sm border-0 p-4">
-                <h4 class="mb-4"><i class="bi bi-person-circle me-2 text-warning"></i>Profile Information</h4>
+    <div class="row g-4">
+        <div class="col-12 col-lg-4">
+            <section class="user-profile-summary h-100">
+                <div class="user-profile-avatar" aria-hidden="true"><i class="bi bi-person"></i></div>
+                <span class="user-profile-summary-label">ACCOUNT HOLDER</span>
+                <h2><?php echo htmlspecialchars($user['full_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?></h2>
+                <p class="user-profile-email"><?php echo htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?></p>
+                <div class="user-profile-member-date">
+                    <small>Member since</small>
+                    <strong><?php echo date('F d, Y', strtotime($user['created_at'])); ?></strong>
+                </div>
+            </section>
+        </div>
+
+        <div class="col-12 col-lg-8">
+            <section class="user-profile-panel p-3 p-md-4 p-xl-5">
+                <div class="user-profile-panel-heading">
+                    <span class="user-profile-panel-icon"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+                    <div>
+                        <h2>Profile information</h2>
+                        <p>Keep your account details up to date.</p>
+                    </div>
+                </div>
 
                 <?php if ($success): ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="bi bi-check-circle-fill me-2"></i><?php echo $success; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <i class="bi bi-check-circle-fill me-2" aria-hidden="true"></i><?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
 
                 <?php if ($error): ?>
                     <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error; ?>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i><?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 <?php endif; ?>
 
                 <form method="POST" action="">
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">Full Name</label>
-                        <input type="text" class="form-control" name="full_name" value="<?php echo $user['full_name']; ?>" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Email</label>
-                        <input type="email" class="form-control" name="email" value="<?php echo $user['email']; ?>" required>
+                        <label class="form-label fw-semibold" for="profileFullName">Full name</label>
+                        <input type="text" class="form-control" id="profileFullName" name="full_name" value="<?php echo htmlspecialchars($user['full_name'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label fw-semibold">Member Since</label>
-                        <input type="text" class="form-control" value="<?php echo date('F d, Y', strtotime($user['created_at'])); ?>" disabled>
+                        <label class="form-label fw-semibold" for="profileEmail">Email</label>
+                        <input type="email" class="form-control" id="profileEmail" name="email" value="<?php echo htmlspecialchars($user['email'] ?? '', ENT_QUOTES, 'UTF-8'); ?>" required>
                     </div>
 
-                    <button type="submit" class="btn btn-warning px-4 fw-semibold">
-                        <i class="bi bi-save me-2"></i>Update Profile
+                    <button type="submit" class="btn btn-primary user-profile-save-button">
+                        <i class="bi bi-save me-2" aria-hidden="true"></i>Save profile
                     </button>
                 </form>
-            </div>
+            </section>
 
-            <div class="card shadow-sm border-0 p-4 mt-4">
-                <h4 class="mb-4"><i class="bi bi-shield-lock me-2 text-warning"></i>Change Password</h4>
-                <p class="text-muted">To change your password, please contact the administrator.</p>
-            </div>
+            <section class="user-profile-password-note mt-4">
+                <span><i class="bi bi-shield-lock" aria-hidden="true"></i></span>
+                <div>
+                    <h2>Password changes</h2>
+                    <p>To change your password, please contact the administrator.</p>
+                </div>
+            </section>
         </div>
     </div>
-</div>
+</main>
 <?php
 $content = ob_get_clean();
-renderUserPage('My Profile', $content);
+renderUserPage('My Profile', $content, '../Loan-system/user_profile.css?v=1');

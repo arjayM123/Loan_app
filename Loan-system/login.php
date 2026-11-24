@@ -46,18 +46,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <title>Login - Loan System</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="responsive.css">
+    <link rel="stylesheet" href="auth.css">
 </head>
-<body>
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-5">
-                <div class="card shadow-sm border-0">
-                    <div class="card-header bg-primary text-white text-center p-4">
-                        <i class="bi bi-bank2 fs-1 mb-3"></i>
-                        <h2>Loan Management System</h2>
+<body class="auth-page">
+    <main class="container auth-shell">
+        <div class="row justify-content-center auth-row">
+            <div class="col-12 col-sm-10 col-md-7 col-lg-5">
+                <div class="card auth-card">
+                    <div class="card-header auth-card-header text-center">
+                        <h1>HIRAM</h1>
                         <p class="mb-0">Sign in to your account</p>
                     </div>
-                    <div class="p-4">
+                    <div class="card-body auth-card-body">
                         <?php if ($error): ?>
                             <div class="alert alert-danger alert-dismissible fade show" role="alert">
                                 <i class="bi bi-exclamation-triangle-fill me-2"></i><?php echo $error; ?>
@@ -67,22 +68,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         
                         <form method="POST" action="">
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Email or Phone Number</label>
+                                <label class="form-label fw-semibold" for="loginIdentifier">Email or Phone Number</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-person"></i></span>
-                                    <input type="text" class="form-control" name="login_identifier" required autofocus placeholder="Email or Phone Number">
+                                    <span class="input-group-text"><i class="bi bi-person" aria-hidden="true"></i></span>
+                                    <input type="text" class="form-control" id="loginIdentifier" name="login_identifier" required autofocus autocomplete="username" placeholder="Email or Phone Number">
                                 </div>
                             </div>
                             
                             <div class="mb-4">
-                                <label class="form-label fw-semibold">Password</label>
+                                <label class="form-label fw-semibold" for="loginPassword">Password</label>
                                 <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
-                                    <input type="password" class="form-control" name="password" required>
+                                    <span class="input-group-text"><i class="bi bi-lock" aria-hidden="true"></i></span>
+                                    <input type="password" class="form-control" id="loginPassword" name="password" required autocomplete="current-password">
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-primary w-100">
+                            <button type="submit" class="btn btn-primary w-100 auth-submit-button">
                                 <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
                             </button>
                         </form>
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </div>
             </div>
         </div>
-    </div>
+    </main>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="alert_auto_dismiss.js"></script>

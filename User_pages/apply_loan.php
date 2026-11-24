@@ -116,6 +116,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 <?php ob_start(); ?>
     <div class="container py-4 loan-application-page">
+        <div class="loan-application-action-rail" aria-label="Loan application actions">
+            <a href="user_dashboard.php"
+               class="btn btn-outline-secondary loan-application-rail-button"
+               aria-label="Back to dashboard"
+               title="Back to dashboard">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                <span class="visually-hidden">Back to dashboard</span>
+            </a>
+            <button type="submit" form="loanForm"
+                    class="btn loan-application-rail-button loan-application-submit-button"
+                    aria-label="Submit loan application"
+                    title="Submit loan application">
+                <i class="bi bi-send" aria-hidden="true"></i>
+                <span class="visually-hidden">Submit loan application</span>
+            </button>
+        </div>
         <div class="row justify-content-center">
             <div class="col-lg-10">
                 <div class="card border-0 shadow-sm overflow-hidden loan-application-card">
@@ -267,9 +283,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                 </div>
                             </div>
                             
-                            <button type="submit" class="btn btn-warning w-100 mt-4 fw-semibold">
-                                <i class="bi bi-send me-2"></i>Submit Application
-                            </button>
                         </form>
                     </div>
                 </div>
@@ -320,4 +333,4 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     </script>
 <?php
 $content = ob_get_clean();
-renderUserPage('Loan Application', $content, '../Loan-system/loan_application.css');
+renderUserPage('Loan Application', $content, '../Loan-system/loan_application.css?v=2');

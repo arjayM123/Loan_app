@@ -9,6 +9,8 @@ function renderAdminPage($title, $content, $extraStylesheet = null) {
     <title><?php echo htmlspecialchars($title); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../Loan-system/responsive.css">
+    <link rel="stylesheet" href="../Loan-system/admin_navbar.css">
     <?php if ($extraStylesheet): ?><link rel="stylesheet" href="<?php echo htmlspecialchars($extraStylesheet, ENT_QUOTES, 'UTF-8'); ?>"><?php endif; ?>
 </head>
 <body>

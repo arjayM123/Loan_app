@@ -11,6 +11,16 @@ $loan_id = filter_var($_GET['loan_id'] ?? 0, FILTER_VALIDATE_INT);
 $loan_id = $loan_id !== false && $loan_id > 0 ? $loan_id : 0;
 $from_date = $_GET['from_date'] ?? '';
 $to_date = $_GET['to_date'] ?? '';
+$payment_weekday = $_GET['payment_weekday'] ?? '';
+$weekday_options = [
+    '1' => 'Sunday',
+    '2' => 'Monday',
+    '3' => 'Tuesday',
+    '4' => 'Wednesday',
+    '5' => 'Thursday',
+    '6' => 'Friday',
+    '7' => 'Saturday'
+];
 $error = '';
 
 $valid_date = static function ($value) {
@@ -37,6 +47,11 @@ if ($from_date !== '' && $to_date !== '' && $from_date > $to_date) {
     $from_date = '';
     $to_date = '';
 }
+if (!is_string($payment_weekday)
+    || ($payment_weekday !== '' && !array_key_exists($payment_weekday, $weekday_options))) {
+    $error = $error ?: 'The weekday filter is invalid.';
+    $payment_weekday = '';
+}
 
 $loan = null;
 if ($loan_id > 0) {
@@ -62,13 +77,15 @@ if ($to_date !== '') {
     $where[] = 'DATE(p.payment_date) <= ?';
     $parameters[] = $to_date;
 }
+if ($payment_weekday !== '') {
+    $where[] = 'DAYOFWEEK(p.payment_date) = ?';
+    $parameters[] = (int) $payment_weekday;
+}
 
-$query = "SELECT p.id, p.loan_id, p.schedule_id, p.amount, p.payment_date, p.payment_method,
-                 p.reference_number, p.notes, ps.payment_number, ps.due_date,
-                 la.applicant_name, la.currency
+$query = "SELECT p.amount, p.payment_date, DATE(p.payment_date) AS paid_date,
+                 DAYNAME(p.payment_date) AS paid_day, la.applicant_name, la.currency
           FROM payments p
-          INNER JOIN loan_applications la ON la.id = p.loan_id
-          LEFT JOIN payment_schedule ps ON ps.id = p.schedule_id";
+          INNER JOIN loan_applications la ON la.id = p.loan_id";
 if ($where) {
     $query .= ' WHERE ' . implode(' AND ', $where);
 }
@@ -93,8 +110,10 @@ if ($from_date !== '' || $to_date !== '') {
             <p><?php echo $loan ? 'Loan #' . (int) $loan['id'] . ' | ' . htmlspecialchars($loan['applicant_name'], ENT_QUOTES, 'UTF-8') : 'All recorded loan payments'; ?></p>
         </div>
         <div class="payment-history-date">
+            <small>Report date</small>
+            <strong><?php echo date('M d, Y'); ?></strong>
             <small>Date range</small>
-            <strong><?php echo htmlspecialchars($date_range_label, ENT_QUOTES, 'UTF-8'); ?></strong>
+            <strong class="payment-history-date-range"><?php echo htmlspecialchars($date_range_label, ENT_QUOTES, 'UTF-8'); ?></strong>
         </div>
     </header>
 
@@ -118,28 +137,26 @@ if ($from_date !== '' || $to_date !== '') {
                 <table class="table table-hover payment-history-table mb-0">
                     <thead>
                         <tr>
-                            <th scope="col">Payment Date</th>
                             <th scope="col">Customer</th>
-                            <th scope="col">Loan</th>
-                            <th scope="col">Payment #</th>
                             <th scope="col" class="text-end">Amount</th>
-                            <th scope="col">Method</th>
-                            <th scope="col">Due Date</th>
-                            <th scope="col">Reference</th>
                         </tr>
                     </thead>
                     <tbody>
+                        <?php $current_paid_date = null; ?>
                         <?php foreach ($history as $record): ?>
                             <?php $currency_code = strtoupper($record['currency'] ?? 'PHP'); ?>
+                            <?php if ($current_paid_date !== $record['paid_date']): ?>
+                                <?php $current_paid_date = $record['paid_date']; ?>
+                                <tr class="payment-history-date-group">
+                                    <th scope="rowgroup" colspan="2">
+                                        <i class="bi bi-calendar3 me-2" aria-hidden="true"></i>
+                                        <?php echo htmlspecialchars(($record['paid_day'] ?? '') . ', ' . date('M d, Y', strtotime($record['paid_date'])), ENT_QUOTES, 'UTF-8'); ?>
+                                    </th>
+                                </tr>
+                            <?php endif; ?>
                             <tr>
-                                <td class="text-nowrap"><?php echo date('M d, Y g:i A', strtotime($record['payment_date'])); ?></td>
                                 <td><?php echo htmlspecialchars($record['applicant_name'], ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td><a href="loan_details.php?id=<?php echo (int) $record['loan_id']; ?>">#<?php echo (int) $record['loan_id']; ?></a></td>
-                                <td><?php echo $record['payment_number'] !== null ? '#' . (int) $record['payment_number'] : '-'; ?></td>
                                 <td class="text-end text-nowrap fw-semibold"><?php echo htmlspecialchars($currency_code, ENT_QUOTES, 'UTF-8') . ' ' . number_format((float) $record['amount'], 2); ?></td>
-                                <td><?php echo htmlspecialchars($record['payment_method'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
-                                <td class="text-nowrap"><?php echo $record['due_date'] ? date('M d, Y', strtotime($record['due_date'])) : '-'; ?></td>
-                                <td><?php echo htmlspecialchars($record['reference_number'] ?: '-', ENT_QUOTES, 'UTF-8'); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -169,19 +186,26 @@ if ($from_date !== '' || $to_date !== '') {
         </a>
     <?php endif; ?>
     <div class="dropdown dropstart">
-        <button type="button" class="btn btn-outline-primary" id="paymentHistoryFilter" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Filter payment history by date" title="Filter payment history by date">
+        <button type="button" class="btn btn-outline-primary" id="paymentHistoryFilter" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Filter payment history" title="Filter payment history">
             <i class="bi bi-list fs-3"></i>
         </button>
         <div class="dropdown-menu p-3" aria-labelledby="paymentHistoryFilter">
-            <h6 class="dropdown-header px-0 pt-0">Filter by payment date</h6>
+            <h6 class="dropdown-header px-0 pt-0">Filter payment history</h6>
             <form method="GET">
                 <?php if ($loan_id > 0): ?><input type="hidden" name="loan_id" value="<?php echo $loan_id; ?>"><?php endif; ?>
+                <label for="paymentWeekday">Day paid</label>
+                <select class="form-select" id="paymentWeekday" name="payment_weekday">
+                    <option value="">All days</option>
+                    <?php foreach ($weekday_options as $weekday_value => $weekday_name): ?>
+                        <option value="<?php echo $weekday_value; ?>" <?php echo $payment_weekday === $weekday_value ? 'selected' : ''; ?>><?php echo htmlspecialchars($weekday_name, ENT_QUOTES, 'UTF-8'); ?></option>
+                    <?php endforeach; ?>
+                </select>
                 <label for="fromDate">From</label>
                 <input type="date" class="form-control" id="fromDate" name="from_date" value="<?php echo htmlspecialchars(is_string($from_date) ? $from_date : '', ENT_QUOTES, 'UTF-8'); ?>">
                 <label for="toDate">To</label>
                 <input type="date" class="form-control" id="toDate" name="to_date" value="<?php echo htmlspecialchars(is_string($to_date) ? $to_date : '', ENT_QUOTES, 'UTF-8'); ?>">
                 <button type="submit" class="btn btn-primary w-100 mt-2"><i class="bi bi-funnel me-1"></i>Apply</button>
-                <a class="btn btn-link btn-sm w-100 mt-1" href="payment_history.php<?php echo $loan_id > 0 ? '?loan_id=' . $loan_id : ''; ?>">Clear dates</a>
+                <a class="btn btn-link btn-sm w-100 mt-1" href="payment_history.php<?php echo $loan_id > 0 ? '?loan_id=' . $loan_id : ''; ?>">Clear filters</a>
             </form>
         </div>
     </div>

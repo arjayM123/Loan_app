@@ -180,6 +180,22 @@ $selected_payment_day = (int) $read_post_text('dueDate');
 ?>
 <?php ob_start(); ?>
 <div class="container py-4 loan-application-page">
+    <div class="loan-application-action-rail" aria-label="Loan creation actions">
+        <a href="manage_loans.php"
+           class="btn btn-outline-secondary loan-application-rail-button"
+           aria-label="Back to loan management"
+           title="Back to loan management">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            <span class="visually-hidden">Back to loan management</span>
+        </a>
+        <button type="submit" form="loanForm"
+                class="btn loan-application-rail-button loan-application-submit-button"
+                aria-label="Create and approve loan"
+                title="Create and approve loan">
+            <i class="bi bi-check-lg" aria-hidden="true"></i>
+            <span class="visually-hidden">Create and approve loan</span>
+        </button>
+    </div>
     <div class="row justify-content-center">
         <div class="col-lg-10">
             <div class="card border-0 shadow-sm overflow-hidden loan-application-card">
@@ -309,7 +325,6 @@ $selected_payment_day = (int) $read_post_text('dueDate');
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-warning w-100 mt-4 fw-semibold"><i class="bi bi-check-circle me-2"></i>Create and Approve Loan</button>
                     </form>
                 </div>
             </div>
@@ -363,4 +378,4 @@ $selected_payment_day = (int) $read_post_text('dueDate');
 </script>
 <?php
 $content = ob_get_clean();
-renderAdminPage('Create Loan', $content, '../Loan-system/loan_application.css');
+renderAdminPage('Create Loan', $content, '../Loan-system/loan_application.css?v=2');

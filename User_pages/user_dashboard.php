@@ -14,73 +14,76 @@ $recent_loans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ob_start();
 ?>
-    <div class="container py-4">
-        <div class="card bg-dark text-white border-0 shadow-sm mb-4">
-            <div class="card-body p-4 p-lg-5">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                    <div>
-                        <p class="text-warning text-uppercase small fw-semibold mb-2">Loan dashboard</p>
-                        <h2 class="mb-1">Welcome, <?php echo htmlspecialchars($_SESSION['full_name']); ?></h2>
-                        <p class="text-white-50 mb-0">Review your recent loan applications.</p>
-                    </div>
-                    <i class="bi bi-wallet2 text-warning display-5"></i>
-                </div>
+    <main class="container py-4 user-dashboard">
+        <section class="user-dashboard-hero mb-4">
+            <div>
+                <span class="user-dashboard-kicker">HIRAM LOAN PORTAL</span>
+                <h1>Welcome, <?php echo htmlspecialchars($_SESSION['full_name'], ENT_QUOTES, 'UTF-8'); ?></h1>
+                <p>Review your recent loan applications and payment details.</p>
             </div>
-        </div>
+            <span class="user-dashboard-date"><i class="bi bi-calendar3 me-2" aria-hidden="true"></i><?php echo date('M j, Y'); ?></span>
+        </section>
 
-
-        <div class="card border-0 shadow-sm p-3 p-md-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0"><i class="bi bi-folder2-open me-2"></i>Loan Applications</h4>
+        <section class="user-dashboard-panel p-3 p-md-4" aria-labelledby="userLoanApplicationsTitle">
+            <div class="user-dashboard-section-heading">
+                <div>
+                    <span class="user-dashboard-section-kicker">YOUR ACCOUNT</span>
+                    <h2 id="userLoanApplicationsTitle">Loan applications</h2>
+                    <p>Select an application to view its details and payment schedule.</p>
+                </div>
+                <span class="user-dashboard-count"><?php echo number_format(count($recent_loans)); ?> recent</span>
             </div>
 
         <?php if (count($recent_loans) > 0): ?>
-            <div class="row g-3">
-                <?php foreach ($recent_loans as $loan): ?>
+            <div class="row g-3 g-lg-4">
+                <?php $display_number = 0; foreach ($recent_loans as $loan): ?>
                     <?php
+                    $display_number++;
                     $badge_class = [
-                        'pending' => 'bg-warning text-dark',
-                        'approved' => 'bg-success',
-                        'rejected' => 'bg-danger',
-                        'completed' => 'bg-info'
+                        'pending' => 'user-loan-status-pending',
+                        'approved' => 'user-loan-status-approved',
+                        'rejected' => 'user-loan-status-rejected',
+                        'completed' => 'user-loan-status-completed'
                     ];
                     $currency_symbol = ($loan['currency'] ?? 'PHP') === 'SGD' ? '$' : '₱';
                     ?>
                     <div class="col-12 col-md-6">
-                        <a href="loan_details.php?id=<?php echo $loan['id']; ?>" class="card h-100 border-warning shadow-sm text-decoration-none text-dark">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                        <a href="loan_details.php?id=<?php echo (int) $loan['id']; ?>" class="user-loan-card h-100 text-decoration-none">
+                            <div class="user-loan-card-body">
+                                <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                                     <div>
-                                        <p class="text-muted small mb-1">Application #<?php echo $loan['id']; ?></p>
-                                        <h5 class="mb-0"><?php echo htmlspecialchars($loan['applicant_name']); ?></h5>
+                                        <p class="user-loan-reference">Recent application <?php echo $display_number; ?></p>
+                                        <h3><?php echo htmlspecialchars($loan['applicant_name'], ENT_QUOTES, 'UTF-8'); ?></h3>
                                     </div>
-                                    <span class="badge <?php echo $badge_class[$loan['status']] ?? 'bg-secondary'; ?>">
-                                        <?php echo ucfirst($loan['status']); ?>
+                                    <span class="user-loan-status <?php echo $badge_class[$loan['status']] ?? 'user-loan-status-default'; ?>">
+                                        <?php echo htmlspecialchars(ucfirst($loan['status']), ENT_QUOTES, 'UTF-8'); ?>
                                     </span>
                                 </div>
-                                <div class="row g-2 small">
-                                    <div class="col-6"><span class="text-muted d-block">Amount</span><strong><?php echo $currency_symbol . number_format($loan['loan_amount'], 2); ?></strong></div>
-                                    <div class="col-6"><span class="text-muted d-block">Term</span><strong><?php echo $loan['loan_term']; ?> months</strong></div>
-                                    <div class="col-6"><span class="text-muted d-block">Interest</span><strong><?php echo $loan['interest_rate']; ?>%</strong></div>
-                                    <div class="col-6"><span class="text-muted d-block">Applied</span><strong><?php echo date('M d, Y', strtotime($loan['application_date'])); ?></strong></div>
+                                <div class="row g-3 user-loan-metrics">
+                                    <div class="col-6"><span>Principal</span><strong><?php echo $currency_symbol . number_format((float) $loan['loan_amount'], 2); ?></strong></div>
+                                    <div class="col-6"><span>Term</span><strong><?php echo (int) $loan['loan_term']; ?> months</strong></div>
+                                    <div class="col-6"><span>Monthly interest</span><strong><?php echo number_format((float) $loan['interest_rate'], 2); ?>%</strong></div>
+                                    <div class="col-6"><span>Applied</span><strong><?php echo date('M d, Y', strtotime($loan['application_date'])); ?></strong></div>
                                 </div>
                             </div>
-                            <div class="card-footer bg-transparent border-0 text-warning-emphasis small">
-                                Open application details <i class="bi bi-arrow-right ms-1"></i>
+                            <div class="user-loan-card-footer">
+                                <span>View application details</span>
+                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
                             </div>
                         </a>
                     </div>
                 <?php endforeach; ?>
             </div>
         <?php else: ?>
-            <div class="text-center py-5">
-                <i class="bi bi-inbox fs-1 text-muted mb-3"></i>
-                <p class="text-muted">No loan applications yet</p>
-                <a href="apply_loan.php" class="btn btn-warning fw-semibold">Apply for Your First Loan</a>
+            <div class="user-dashboard-empty">
+                <span><i class="bi bi-inbox" aria-hidden="true"></i></span>
+                <h3>No loan applications yet</h3>
+                <p>Start an application to see your loan and payment details here.</p>
+                <a href="apply_loan.php" class="btn btn-primary">Apply for your first loan</a>
             </div>
         <?php endif; ?>
-    </div>
-</div>
+        </section>
+    </main>
 <?php
 $content = ob_get_clean();
-renderUserPage('User Dashboard', $content);
+renderUserPage('User Dashboard', $content, '../Loan-system/user_dashboard.css?v=1');

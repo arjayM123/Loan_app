@@ -80,8 +80,13 @@ body.bg-light {
 .payment-history-kicker { margin-bottom: .35rem; color: #f6c343; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .payment-history-date { padding: .8rem 1rem; border: 1px solid rgba(255,255,255,.16); border-radius: .9rem; background: rgba(255,255,255,.08); text-align: right; }
 .payment-history-date small { display: block; color: rgba(255,255,255,.72); }
+.payment-history-date strong { display: block; }
+.payment-history-date-range { font-size: .9rem; }
 .payment-history-table thead th { background: #f1f4f8; color: #45566e; font-size: .8rem; white-space: nowrap; }
 .payment-history-table td { vertical-align: middle; }
+.payment-history-table > tbody > tr.payment-history-date-group > th { padding: .85rem 1rem; border-top: 2px solid #f6c343; border-bottom: 0; border-left: 4px solid #f6c343; background: linear-gradient(110deg, #172033, #273c5a) !important; color: #f6c343 !important; font-size: .9rem; font-weight: 700; letter-spacing: .025em; }
+.payment-history-table > tbody > tr:not(.payment-history-date-group) > td { padding-top: .85rem; padding-bottom: .85rem; background: #fff; }
+.payment-history-table > tbody > tr:not(.payment-history-date-group) > td:last-child { color: #273c5a; font-variant-numeric: tabular-nums; }
 .payment-history-empty { padding: 3.5rem 1rem; border: 1px dashed #cbd5e1; border-radius: 1rem; background: rgba(255,255,255,.75); text-align: center; }
 
 @media (max-width: 575.98px) {
