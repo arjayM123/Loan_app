@@ -43,10 +43,10 @@ if ($isLocalEnvironment) {
     define('DB_PASS', '');
     define('DB_NAME', 'loan_system');
 } else {
-    define('DB_HOST', $readDatabaseSetting('sql100.infinityfree.com', 'host'));
-    define('DB_USER', $readDatabaseSetting('if0_41024119', 'user'));
-    define('DB_PASS', $readDatabaseSetting('HIRAM2026', 'password'));
-    define('DB_NAME', $readDatabaseSetting('if0_41024119_loan_system', 'database'));
+    define('DB_HOST', $readDatabaseSetting('LOAN_DB_HOST', 'host'));
+    define('DB_USER', $readDatabaseSetting('LOAN_DB_USER', 'user'));
+    define('DB_PASS', $readDatabaseSetting('LOAN_DB_PASS', 'password'));
+    define('DB_NAME', $readDatabaseSetting('LOAN_DB_NAME', 'database'));
 
     if (DB_HOST === '' || DB_USER === '' || DB_PASS === '' || DB_NAME === '') {
         error_log('Loan app database configuration is missing.');
